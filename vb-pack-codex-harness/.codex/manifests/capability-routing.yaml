@@ -1,0 +1,42 @@
+version: 1
+defaults:
+  orchestrator_mode: local
+  worker_mode: worktree
+  reviewer_mode: local
+routes:
+  codebase_question:
+    tool: subagent
+    role: explorer
+    note: specific, bounded, read-only question
+  bounded_implementation:
+    tool: subagent
+    role: worker
+    note: disjoint write scope, default worktree
+  independent_review:
+    tool: subagent
+    role: reviewer
+    note: regression scan, no overlapping prod edits
+  current_research:
+    tool: browser
+    role: main-session
+    note: docs, release notes, cited research
+  browser_qa:
+    tool: browser
+    role: main-session
+    note: web UI validation before computer use
+  gui_blocked_or_auth_heavy:
+    tool: computer-use
+    role: main-session
+    note: escalate only when browser and terminal are insufficient
+  recurring_followup:
+    tool: automation
+    role: main-session
+    note: heartbeat preferred over cron
+  git_state_inspection:
+    tool: built-in-git
+    role: main-session
+    note: inspect status, diff, log before shell fallback
+  repro_or_tests:
+    tool: terminal
+    role: main-session
+    note: deterministic commands and environment checks

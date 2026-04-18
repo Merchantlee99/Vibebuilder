@@ -1,0 +1,32 @@
+version: 1
+tiers:
+  trivial:
+    required_artifacts:
+      - targeted-validation
+    required_review: none
+  normal:
+    required_artifacts:
+      - Prompt.md
+      - PRD.md
+      - Plan.md
+      - Implement.md
+      - Documentation.md
+      - Subagent-Manifest.md
+    required_review: reviewer-pass
+  high-risk:
+    required_artifacts:
+      - Prompt.md
+      - PRD.md
+      - Plan.md
+      - Implement.md
+      - Documentation.md
+      - Subagent-Manifest.md
+      - rollback-plan
+      - design-options
+    required_review: reviewer-pass-plus-extra-validation
+review_focus:
+  - correctness
+  - regression-risk
+  - test-gaps
+  - blast-radius
+  - rollback-readiness

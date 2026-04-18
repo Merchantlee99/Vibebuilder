@@ -1,0 +1,47 @@
+{
+  "framework_version": "codex-native-harness-0.1.0",
+  "response_language": "ko",
+  "deployment_profile": "template",
+  "mode": "advisory",
+  "stage": "template-hardened",
+  "current_focus": "keep the template advisory-safe and promote enforced only in copied project instances",
+  "defaults": {
+    "orchestrator_mode": "local",
+    "worker_mode": "worktree",
+    "review_mode": "local",
+    "automation_kind": "heartbeat",
+    "automation_destination": "thread"
+  },
+  "tiers": {
+    "trivial_loc_max": 20,
+    "normal_loc_max": 120
+  },
+  "flags": {
+    "docs_seeded": true,
+    "manifests_ready": true,
+    "templates_ready": true,
+    "scripts_ready": true,
+    "verification_green": true
+  },
+  "feedback_loop": {
+    "prefetch_enabled": true,
+    "sync_from_events_enabled": true,
+    "skill_auto_gen_enabled": true,
+    "skill_auto_gen_threshold": 3,
+    "insights_interval_days": 7
+  },
+  "hook_adapter": {
+    "enabled": false,
+    "prefetch_on_prompt": true,
+    "prefetch_top_k": 3,
+    "stop_on_pending_review": true,
+    "post_tool_sync": true
+  },
+  "paths": {
+    "events_log": ".codex/telemetry/events.jsonl",
+    "learnings_log": ".codex/telemetry/learnings.jsonl",
+    "activity_state": ".codex/context/activity-state.json",
+    "reviews_dir": ".codex/reviews",
+    "audits_dir": ".codex/audits"
+  }
+}

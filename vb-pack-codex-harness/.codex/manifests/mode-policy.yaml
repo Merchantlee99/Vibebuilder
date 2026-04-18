@@ -1,0 +1,48 @@
+version: 1
+profiles:
+  template:
+    allowed_runtime_modes:
+      - advisory
+    use_for:
+      - template-authoring
+      - distribution
+      - copy-into-new-project
+  project:
+    allowed_runtime_modes:
+      - advisory
+      - enforced
+    enforced_requires:
+      - git_repo_initialized
+      - head_commit_exists
+    use_for:
+      - active-delivery
+      - parallel-worktrees
+      - long-running-project-execution
+modes:
+  local:
+    use_for:
+      - planning
+      - orchestration
+      - docs
+      - secrets
+      - small-fix
+      - git-inspection
+    avoid_for:
+      - large-parallel-worker-edits
+  worktree:
+    use_for:
+      - worker-subagents
+      - parallel-implementation
+      - refactors
+      - broad-edits
+      - high-risk-writes
+    avoid_for:
+      - secret-bound setup that requires the primary local environment
+  cloud:
+    use_for:
+      - clean-room-review
+      - isolated-repro
+      - read-heavy-validation
+    avoid_for:
+      - local-secret-dependencies
+      - environment-coupled-prod-writes

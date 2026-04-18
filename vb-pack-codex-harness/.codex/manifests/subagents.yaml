@@ -1,0 +1,68 @@
+version: 1
+roles:
+  orchestrator:
+    can_delegate: true
+    write_scope: planning-and-docs
+    default_mode: local
+    purpose: Own task decomposition, routing, integration, and final delivery.
+  explorer:
+    can_delegate: false
+    write_scope: none
+    default_mode: local
+    purpose: Answer a narrow codebase question with concrete file references.
+  worker:
+    can_delegate: false
+    write_scope: assigned-only
+    default_mode: worktree
+    purpose: Implement a bounded slice without touching other owned paths.
+  reviewer:
+    can_delegate: false
+    write_scope: .codex/reviews/**
+    default_mode: local
+    purpose: Review for bugs, regressions, missing tests, and rollback risk.
+defaults:
+  shared_read_scope:
+    - Prompt.md
+    - PRD.md
+    - Plan.md
+    - Implement.md
+    - Documentation.md
+    - Subagent-Manifest.md
+  protected_paths:
+    - AGENTS.md
+    - ETHOS.md
+    - .codex/runtime.json
+    - .codex/manifests/**
+    - .codex/hooks/**
+    - .codex/telemetry/**
+parallelism:
+  max_active_workers: 3
+  ownership_state: .codex/context/ownership.json
+required_contract:
+  - goal
+  - owner
+  - read_scope
+  - write_scope
+  - stop_condition
+  - validation
+  - forbidden_paths
+handoff:
+  explorer:
+    - answer
+    - file_references
+    - open_questions
+  worker:
+    - changed_files
+    - validations_run
+    - remaining_risks
+  reviewer:
+    - findings
+    - validations_checked
+    - rollback_risk
+rules:
+  - one_write_owner_per_path
+  - do_not_delegate_immediate_blocker
+  - worktree_first_for_worker_edits
+  - reviewer_does_not_patch_same_scope_by_default
+  - worker_reports_changed_files_and_validation
+  - generated_dispatch_spec_is_preferred_before_launch

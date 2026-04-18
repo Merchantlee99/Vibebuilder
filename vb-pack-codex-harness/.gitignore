@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.DS_Store
+.codex/telemetry/events.jsonl
+.codex/telemetry/learnings.jsonl
+.codex/context/activity-state.json
+.codex/context/session.json
+.codex/context/ownership.json
+.codex/context/subagent-tasks.json
+.codex/context/automation-intents.json
+.codex/reviews/*.md
+.codex/audits/insights-*.md
+.codex/audits/meta-audit-pending-*.md
+.codex/skills/_proposed/*.md

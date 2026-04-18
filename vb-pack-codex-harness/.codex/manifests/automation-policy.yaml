@@ -1,0 +1,49 @@
+version: 1
+defaults:
+  kind: heartbeat
+  destination: thread
+create_when:
+  - task-spans-more-than-one-day
+  - pending-audit-needs-follow-up
+  - waiting-state-needs-resume
+  - weekly-retro-or-hygiene-loop-is-useful
+avoid_when:
+  - trivial-one-shot-task
+  - same-turn-follow-up-is-sufficient
+rules:
+  - prompt-describes-task-not-schedule
+  - heartbeat-preferred-for-same-thread-continuity
+  - include-output-expectation-when-useful
+signals:
+  pending_review: next-working-block
+  evolution_sweep: weekly
+  proposed_skill_triage: weekly
+recommended_loops:
+  pending_review_followup:
+    kind: heartbeat
+    destination: thread
+    cadence_hint: next-working-block
+    expected_output: updated review artifact or blocker note
+    skip_condition: latest review is accepted or the task is closed
+  harness_evolution_sweep:
+    kind: heartbeat
+    destination: thread
+    cadence_hint: weekly
+    expected_output: fresh insights report plus one harness change proposal
+    skip_condition: recent insights already exist and no new learnings accumulated
+  proposed_skill_triage:
+    kind: heartbeat
+    destination: thread
+    cadence_hint: weekly
+    expected_output: promote, revise, or archive proposed skills
+    skip_condition: no proposed skills remain
+intent_contract:
+  required:
+    - name
+    - kind
+    - destination
+    - cadence_hint
+    - prompt
+    - skip_condition
+    - expected_output
+    - evidence

@@ -1,0 +1,15 @@
+version: 1
+prefetch:
+  enabled: true
+  top_k: 5
+sync_from_events:
+  enabled: true
+  default_limit: 50
+skill_auto_gen:
+  enabled: true
+  threshold: 3
+  output_dir: .codex/skills/_proposed
+insights:
+  enabled: true
+  interval_days: 7
+  output_dir: .codex/audits
