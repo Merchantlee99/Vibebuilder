@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "_note": "Automation policy for long-running / recurring tasks. Read by scripts/harness/automation_planner.py.",
+  "defaults": {
+    "kind": "heartbeat",
+    "destination": "thread"
+  },
+  "create_when": [
+    "task-spans-more-than-one-day",
+    "pending-review-needs-follow-up",
+    "waiting-state-needs-resume",
+    "weekly-retro-or-hygiene-loop-is-useful"
+  ],
+  "avoid_when": [
+    "trivial-one-shot-task",
+    "same-turn-follow-up-is-sufficient"
+  ],
+  "signals": {
+    "pending_review": "next-working-block",
+    "evolution_sweep": "weekly",
+    "proposed_skill_triage": "weekly",
+    "learnings_digest": "weekly"
+  },
+  "recommended_loops": {
+    "pending_review_followup": {
+      "kind": "heartbeat",
+      "trigger": "python3 scripts/harness/invoke_reviewer.py",
+      "cadence_hint": "next-working-block",
+      "expected_output": "reviewer brief printed, or confirmation that review was filed",
+      "skip_condition": "latest review-needed event has a matching 02 pass",
+      "evidence": ".claude/events.jsonl (gate=02 outcome=review-needed with no matching pass)"
+    },
+    "harness_evolution_sweep": {
+      "kind": "scheduled",
+      "trigger": "python3 scripts/harness/insights_engine.py --force",
+      "cadence_hint": "weekly",
+      "expected_output": "fresh insights report at .claude/audits/insights-<ts>.md",
+      "skip_condition": "audits dir has insights-*.md within last 7 days",
+      "evidence": ".claude/audits/insights-*.md"
+    },
+    "proposed_skill_triage": {
+      "kind": "heartbeat",
+      "trigger": "ls .claude/skills/_evolving/ && python3 scripts/harness/skill_auto_gen.py --sweep",
+      "cadence_hint": "weekly",
+      "expected_output": "promote, revise, or archive proposed skills",
+      "skip_condition": "_evolving/ is empty",
+      "evidence": ".claude/skills/_evolving/"
+    },
+    "learnings_taxonomy_review": {
+      "kind": "scheduled",
+      "trigger": "python3 scripts/harness/taxonomy_learner.py --force",
+      "cadence_hint": "weekly",
+      "expected_output": "updated .claude/audits/taxonomy-proposals.md",
+      "skip_condition": "learnings.jsonl has <5 new entries since last run",
+      "evidence": ".claude/audits/taxonomy-proposals.md"
+    }
+  },
+  "intent_contract": {
+    "required": [
+      "name", "kind", "destination", "cadence_hint",
+      "trigger", "skip_condition", "expected_output", "evidence"
+    ]
+  }
+}

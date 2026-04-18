@@ -25,8 +25,8 @@ description: Pre-landing code review. Finds bugs that pass CI but break in prod.
 
 ### 1. 누가 review 하는가
 
-- 작성자 actor 가 `claude` 면 reviewer 는 `codex` 또는 `user`
-- 작성자 actor 가 `codex` 면 reviewer 는 `claude` 또는 `user`
+- 작성자 actor 가 `claude` 면 reviewer 는 `user` 또는 isolated `claude-reviewer` 세션
+- 이 프레임워크는 Codex 경로를 사용하지 않는다 (CLAUDE.md / AGENTS.md 참조)
 - Gate ② P2-F 는 같은 actor 가 self-review 를 기록하는 것을 기계 차단
 
 ### 2. 무엇을 읽는가

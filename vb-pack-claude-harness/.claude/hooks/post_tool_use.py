@@ -62,10 +62,9 @@ def gate_2_review_needed(repo_root: Path, size: dict) -> None:
     ensure_harness_importable(repo_root)
     import event_log  # type: ignore
 
-    import os
-    author_actor = os.environ.get("CLAUDE_HARNESS_AUTHOR", "claude")
-    if author_actor not in ("claude", "user", "claude-reviewer"):
-        author_actor = "claude"
+    # author_actor is hardcoded: this session is always Claude. Do NOT read from
+    # env/config — that would let the author forge `user` and bypass Gate ② P2-F.
+    author_actor = "claude"
 
     # Pick sealed prompt by file type and path. In solo mode, the expected
     # reviewer actor is `user` (human) or `claude-reviewer` (isolated session).
@@ -246,7 +245,10 @@ def gate_8_claim_verify(repo_root: Path, tool_name: str, tool_input: dict) -> No
 
 
 def gate_9_trust(repo_root: Path, tool_name: str, tool_response: dict) -> None:
-    if tool_name not in ("WebFetch", "WebSearch", "Bash"):
+    # MCP tool names start with "mcp__<server>__<tool>". Treat ALL MCP
+    # responses as external untrusted data (same class as WebFetch).
+    is_mcp = isinstance(tool_name, str) and tool_name.startswith("mcp__")
+    if tool_name not in ("WebFetch", "WebSearch", "Bash") and not is_mcp:
         return
     text = ""
     if isinstance(tool_response, dict):

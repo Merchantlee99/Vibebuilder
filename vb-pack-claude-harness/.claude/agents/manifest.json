@@ -1,6 +1,11 @@
 {
-  "version": "2.0-solo",
+  "version": "2.1-solo",
   "description": "Solo-Claude role manifest. builder = claude (this session). reviewer = user (human) or optional claude-reviewer (isolated session). No Codex path.",
+  "dispatch": {
+    "mode": "manual",
+    "note": "Reviewers are NOT auto-invoked. Post-hook records a `review-needed` event; the user (or a separately launched isolated Claude Code session acting as `claude-reviewer`) must open the referenced sealed prompt, write `.claude/reviews/<ts>.md`, then record `02 pass <actor>` via scripts/harness/event_log.py. Gate ② P2-F enforces author != reviewer at verdict-record time, not at dispatch time.",
+    "claude_reviewer_invocation": "To run a claude-reviewer: open a new Claude Code session in the same repo with `CLAUDE_ACTOR=claude-reviewer` (informational only — actor is recorded by whoever calls event_log.py). The reviewer session should start by reading the sealed prompt referenced in the latest `review-needed` event's `suggested_sealed_prompt`, then nothing else from this author session."
+  },
   "roles": [
     {
       "id": "planner",

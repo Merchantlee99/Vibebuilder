@@ -112,6 +112,28 @@ def circuit_check(hook_name: str, repo_root: Optional[Path] = None) -> tuple[boo
     return True, reason
 
 
+def circuit_severity(hook_name: str, repo_root: Optional[Path] = None) -> str:
+    """Return 'ok' | 'manual' | 'tripped'.
+
+    'tripped' = auto-disabled after consecutive failures (indicates real fault).
+    'manual'  = user-disabled via CLI for maintenance.
+    'ok'      = hook is live.
+
+    Gate-enforcing hooks (pre_tool_use) should fail-closed on 'tripped' so a
+    broken hook cannot silently drop enforcement.
+    """
+    root = repo_root or _find_root()
+    runtime = _load_runtime(root)
+    state = runtime.get("hook_health", {}).get(hook_name, {})
+    if not bool(state.get("disabled", False)):
+        return "ok"
+    last_reason = state.get("last_failure_reason", "") or ""
+    streak = int(state.get("streak", 0) or 0)
+    if last_reason == "manually disabled" and streak < STREAK_THRESHOLD:
+        return "manual"
+    return "tripped"
+
+
 def record_success(hook_name: str, repo_root: Optional[Path] = None) -> None:
     root = repo_root or _find_root()
     runtime = _load_runtime(root)
