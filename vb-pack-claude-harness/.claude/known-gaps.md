@@ -86,11 +86,11 @@
 1. 프로젝트 루트에 복제 (README 설치 섹션)
 2. `templates/` 의 6개 필수 산출물 복사 + 프로젝트 목표로 채움
 3. `python3 scripts/harness/self_test.py` — 전체 green 확인
-4. `python3 -m unittest discover -s tests -v` — 40 tests PASS 확인
+4. `python3 -m unittest discover -s tests -q` — 전체 PASS 확인 (현재 57 tests)
 5. 첫 non-trivial 편집 시도 → Gate ① block 확인 (정상)
 6. Direction-check 기록 후 → 편집 진행
 7. 편집 후 → review-needed 자동 기록 확인
-8. Secondary reviewer (codex 또는 user) invoke → `.claude/reviews/<ts>.md` 작성
+8. Secondary reviewer (user 또는 isolated claude-reviewer 세션) invoke → `.claude/reviews/<ts>.md` 작성
 9. `02 pass <reviewer-actor>` 기록 → 다음 편집 허용
 10. 2주 사용 후 `scripts/harness/insights_engine.py --force` 로 첫 rollup
 

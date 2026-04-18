@@ -80,7 +80,7 @@ Then the caller will record the verdict via:
 ```
 python3 scripts/harness/event_log.py 01 pass <reviewer-actor> <file> <<JSON
 {
-  "codex_response_file": ".claude/direction-checks/<file>.md",
+  "direction_check_file": ".claude/direction-checks/<file>.md",
   "summary": "<verdict> — <top risk in one line>",
   "tier": "normal|high-risk"
 }

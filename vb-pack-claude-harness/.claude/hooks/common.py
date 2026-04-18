@@ -143,24 +143,28 @@ def emit_block(reason: str) -> None:
 
 
 # ── protected paths (Layer 3: Gate ⑦) ─────────────────────────────────
+# Single source of truth lives in scripts/harness/protected_paths.py.
+# That module is imported lazily so hooks still work if scripts/ is missing.
 
-PROTECTED_REGEX = [
-    re.compile(r"^\.claude/hooks/"),
-    re.compile(r"^\.claude/sealed-prompts/"),
-    re.compile(r"^\.claude/settings\.local\.json$"),
-    re.compile(r"^\.claude/events\.jsonl$"),
-    re.compile(r"^\.claude/learnings\.jsonl$"),
-    re.compile(r"^\.claude/audits/"),
-    re.compile(r"^\.claude/runtime\.json$"),
-    re.compile(r"^scripts/harness/"),
-    re.compile(r"^CLAUDE\.md$"),
-    re.compile(r"^AGENTS\.md$"),
-    re.compile(r"^ETHOS\.md$"),
-    re.compile(r"^\.gitignore$"),
-]
-# Note: .claude/reviews/, direction-checks/, spikes/ are PRODUCED by gates,
-# so NOT in protected list — forgery defense is via actor crossover +
-# fingerprint + rollback triggers in Gate ②.
+def _load_protected():
+    try:
+        import sys as _sys
+        from pathlib import Path as _P
+        _sys.path.insert(0, str(_P(__file__).resolve().parents[2] / "scripts" / "harness"))
+        from protected_paths import PROTECTED_REGEX as _PR  # type: ignore
+        return _PR
+    except Exception:
+        # Fallback — minimal set. Should never happen in a sane install.
+        return [
+            re.compile(r"^\.claude/hooks/"),
+            re.compile(r"^\.claude/sealed-prompts/"),
+            re.compile(r"^\.claude/runtime\.json$"),
+            re.compile(r"^scripts/harness/"),
+            re.compile(r"^CLAUDE\.md$"),
+        ]
+
+
+PROTECTED_REGEX = _load_protected()
 
 
 def is_protected_path(rel_path: str) -> Optional[re.Pattern]:

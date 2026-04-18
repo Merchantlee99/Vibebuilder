@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -27,9 +28,10 @@ import sys as _sys
 from pathlib import Path as _P
 _sys.path.insert(0, str(_P(__file__).parent.parent.parent / 'scripts' / 'harness'))
 try:
-    from hook_health import circuit_check as _circuit_check, record_success as _rec_ok, record_failure as _rec_fail  # type: ignore
+    from hook_health import circuit_check as _circuit_check, circuit_severity as _circuit_severity, record_success as _rec_ok, record_failure as _rec_fail  # type: ignore
 except Exception:
     _circuit_check = None
+    _circuit_severity = None
     _rec_ok = _rec_fail = None
 
 
@@ -60,7 +62,7 @@ def gate_7_selfprotect(repo_root: Path, rel_paths: list[str]) -> None:
 
 def gate_10_parallel_spike(repo_root: Path, size: dict) -> None:
     """If .claude/parallel-spike.flag exists AND tier=high-risk AND complexity=complex,
-    require both .claude/spikes/<sess>/<target>/{claude,codex}.md before proceeding.
+    require both .claude/spikes/<sess>/<target>/{design-a,design-b}.md before proceeding.
     """
     flag = repo_root / ".claude" / "parallel-spike.flag"
     if not flag.exists():
@@ -76,14 +78,14 @@ def gate_10_parallel_spike(repo_root: Path, size: dict) -> None:
     session_id = event_log._resolve_session_id()
     safe_name = size["file_path"].replace("/", "_").replace(".", "_")
     spike_dir = repo_root / ".claude" / "spikes" / session_id / safe_name
-    claude_spike = spike_dir / "claude.md"
-    codex_spike = spike_dir / "codex.md"
+    design_a = spike_dir / "design-a.md"
+    design_b = spike_dir / "design-b.md"
 
-    if (claude_spike.exists() and codex_spike.exists()
-            and claude_spike.stat().st_size > 200 and codex_spike.stat().st_size > 200):
+    if (design_a.exists() and design_b.exists()
+            and design_a.stat().st_size > 200 and design_b.stat().st_size > 200):
         event_log.append_event(
             gate="10", outcome="pass", actor="claude", file_path=size["file_path"],
-            detail={"claude_spike": str(claude_spike), "codex_spike": str(codex_spike),
+            detail={"design_a": str(design_a), "design_b": str(design_b),
                     "tier": size["tier"], "complexity": size["complexity"]},
             repo_root=repo_root,
         )
@@ -101,8 +103,8 @@ def gate_10_parallel_spike(repo_root: Path, size: dict) -> None:
         f"Target: {size['file_path']}\n"
         f"Tier: {size['tier']}, Complexity: {size['complexity']}\n\n"
         f"Before implementing, create TWO design documents:\n"
-        f"  1. {claude_spike}\n"
-        f"  2. {codex_spike}\n\n"
+        f"  1. {design_a}\n"
+        f"  2. {design_b}\n\n"
         f"To cancel: rm {flag}"
     )
 
@@ -120,7 +122,10 @@ def gate_6_scope(repo_root: Path, size: dict, runtime: dict) -> None:
     cumulative_loc = 0
     files_seen: set[str] = set()
 
-    for e in event_log.iter_all_events(repo_root=repo_root):
+    # Exclude synthesized events (from activity_replay) so hook-gap windows
+    # don't inflate the cumulative LOC count and false-block future edits.
+    for e in event_log.iter_all_events(repo_root=repo_root,
+                                         include_synthesized=False):
         ev_sess = e.get("session") or ""
         if not ev_sess:
             continue
@@ -346,10 +351,43 @@ def gate_2_pre(repo_root: Path, size: dict) -> None:
             gate4_latest[f_] = (ts, e.get("outcome", ""))
 
     latest_for_target = gate4_latest.get(target_file, (None, ""))
-    gate4_blocked = latest_for_target[1] == "block"
+    gate4_outcome = latest_for_target[1]
+    gate4_blocked = gate4_outcome == "block"
+    # P2-b race fix: "info" means runner was spawned but not yet reported
+    # pass/block. In enforced mode this is a race risk — treat as pending
+    # and block the next edit. In advisory/bootstrap it's tracked but allowed.
+    gate4_pending = gate4_outcome == "info"
 
-    if unresolved == 0 and not gate4_blocked:
+    runtime_mode = "bootstrap"
+    try:
+        rt = (repo_root / ".claude" / "runtime.json")
+        if rt.exists():
+            import json as _json
+            runtime_mode = _json.loads(rt.read_text(encoding="utf-8")).get("mode", "bootstrap")
+    except Exception:
+        pass
+
+    if unresolved == 0 and not gate4_blocked and not (gate4_pending and runtime_mode == "enforced"):
         return
+
+    if gate4_pending and runtime_mode == "enforced" and not gate4_blocked and unresolved == 0:
+        event_log.append_event(
+            gate="02", outcome="block", actor="claude", file_path=target_file,
+            detail={"tier": size["tier"],
+                    "reason": "gate-04 runner still pending (race guard)",
+                    "gate4_file": target_file, "gate4_ts": latest_for_target[0]},
+            repo_root=repo_root,
+        )
+        emit_block(
+            f"BLOCKED by Gate ② (P2-b: Gate ④ pending).\n\n"
+            f"Attempted: {target_file} ({size['tier']}, {size['total']} LOC)\n"
+            f"The async test runner for this file has not reported pass/block yet.\n"
+            f"Last outcome: info (spawned at {latest_for_target[0]}).\n\n"
+            f"How to unblock:\n"
+            f"  - Wait a few seconds and retry (runner typically completes <10s).\n"
+            f"  - Or check .claude/test-runs/ for the latest log.\n"
+            f"  - Advisory/bootstrap mode skips this guard; only enforced mode blocks."
+        )
 
     # Pure gate-04 failure (no unresolved review, but tests red)
     if unresolved == 0 and gate4_blocked:
@@ -432,11 +470,13 @@ def gate_1_direction(repo_root: Path, size: dict) -> None:
         if ts is None or ts < cutoff:
             continue
         detail = e.get("detail") or {}
-        codex_file = detail.get("codex_response_file", "")
-        if not codex_file:
+        # Accept new key (direction_check_file) + legacy (codex_response_file)
+        ref_file = (detail.get("direction_check_file")
+                    or detail.get("codex_response_file", ""))
+        if not ref_file:
             continue
-        codex_abs = repo_root / codex_file
-        if not codex_abs.exists() or codex_abs.stat().st_size < 50:
+        ref_abs = repo_root / ref_file
+        if not ref_abs.exists() or ref_abs.stat().st_size < 50:
             continue
         valid = True
         break
@@ -459,7 +499,131 @@ def gate_1_direction(repo_root: Path, size: dict) -> None:
         f"1. Invoke reviewer with .claude/sealed-prompts/direction-check.md\n"
         f"2. They write .claude/direction-checks/<ts>.md\n"
         f"3. Record: python3 scripts/harness/event_log.py 01 pass <reviewer-actor> <file> <<JSON\n"
-        f"   {{\"codex_response_file\":\"...\", \"summary\":\"...\", \"tier\":\"{size['tier']}\"}}"
+        f"   {{\"direction_check_file\":\"...\", \"summary\":\"...\", \"tier\":\"{size['tier']}\"}}"
+    )
+
+
+_EDIT_VERBS = (
+    r"edit|modif(?:y|ies|ied)|writ(?:e|es|ing)|chang(?:e|es|ing)|"
+    r"updat(?:e|es|ing)|patch(?:es|ed|ing)?|rewrit(?:e|es|ing)|"
+    r"append(?:s|ed|ing)?|replac(?:e|es|ing)|delet(?:e|es|ing)|"
+    r"remov(?:e|es|ing)|touch(?:es|ed|ing)?|creat(?:e|es|ing)|"
+    r"add(?:s|ed|ing)?\s+(?:to|code|lines?)|"
+    r"수정|편집|변경|추가|작성|덮어쓰|고쳐|고침"
+)
+_EDIT_VERB_RE = re.compile(_EDIT_VERBS, re.IGNORECASE)
+
+# Negation markers — edit verb preceded by these does NOT count as intent.
+_NEGATION_RE = re.compile(
+    r"(?:do\s+not|don['’]t|never|without|never?\s+touch|"
+    r"must\s+not|avoid|forbidden|no\s+edits?\s+to|"
+    r"하지\s*말|않\s*고|금지)\s*\S{0,40}$",
+    re.IGNORECASE,
+)
+
+
+def gate_11_subagent_preflight(repo_root: Path, tool_input: dict) -> None:
+    """Gate ⑪ — Task/Agent tool preflight.
+
+    Claude's Agent (a.k.a. Task) tool spawns a subagent. Before dispatch,
+    verify that the prompt does not claim write access to any protected
+    path. Advisory in bootstrap/advisory mode, blocking in enforced mode.
+
+    Heuristic:
+      1. For each protected base path, locate every mention (strips
+         backticks/quotes/trailing punctuation around paths).
+      2. Within ±120 chars of the mention, look for an edit-verb regex.
+      3. If the edit-verb is immediately preceded by a negation phrase
+         ("do not", "never", "하지 말"), treat as a prohibition, not intent.
+      4. Skip paths that appear only inside a "forbidden" / "protected"
+         directive (heuristically detected by header line).
+    """
+    prompt_text = tool_input.get("prompt", "") or ""
+    if not isinstance(prompt_text, str) or not prompt_text:
+        return
+
+    ensure_harness_importable(repo_root)
+    try:
+        from protected_paths import PROTECTED_GLOBS  # type: ignore
+    except Exception:
+        return
+
+    hits: list[str] = []
+    normalized = prompt_text
+    # Strip backticks around paths so `.claude/hooks/foo.py` matches base ".claude/hooks"
+    normalized_for_scan = re.sub(r"[`\"']", " ", normalized)
+
+    for glob in PROTECTED_GLOBS:
+        base = glob.rstrip("/*").rstrip("/")
+        if not base or base in (".", ""):
+            continue
+        # Word-boundary search — avoid matching "CLAUDE.md" inside "CLAUDE.md-like"
+        pat = re.compile(r"(?<![\w/.])" + re.escape(base) + r"(?![\w])",
+                          re.IGNORECASE)
+        for m in pat.finditer(normalized_for_scan):
+            start, end = m.start(), m.end()
+            win_start = max(0, start - 120)
+            win_end = min(len(normalized_for_scan), end + 120)
+            window = normalized_for_scan[win_start:win_end]
+
+            verb_m = _EDIT_VERB_RE.search(window)
+            if not verb_m:
+                continue
+
+            # Check negation: text before the verb in the window
+            before_verb = window[:verb_m.start()]
+            if _NEGATION_RE.search(before_verb):
+                continue
+
+            # Skip if the mention is inside a "forbidden:" / "Do NOT touch" header block
+            line_start = normalized_for_scan.rfind("\n", 0, start) + 1
+            line = normalized_for_scan[line_start:normalized_for_scan.find("\n", start) if normalized_for_scan.find("\n", start) != -1 else len(normalized_for_scan)]
+            if re.match(r"\s*(?:forbidden|protected|do\s*not\s*touch|do\s*not\s*edit|금지)",
+                         line, re.IGNORECASE):
+                continue
+
+            hits.append(base)
+            break  # one hit per protected base is enough
+
+    if not hits:
+        return
+
+    import event_log  # type: ignore
+    detail = {"protected_mentions": hits[:5],
+              "subagent_type": tool_input.get("subagent_type", ""),
+              "description": tool_input.get("description", "")}
+
+    # Check runtime mode
+    mode = "bootstrap"
+    try:
+        import json as _json
+        rt = repo_root / ".claude" / "runtime.json"
+        if rt.exists():
+            mode = _json.loads(rt.read_text(encoding="utf-8")).get("mode", "bootstrap")
+    except Exception:
+        pass
+
+    if mode == "enforced":
+        event_log.append_event(
+            gate="11", outcome="block", actor="claude",
+            file_path="(Agent tool)", detail=detail, repo_root=repo_root,
+        )
+        emit_block(
+            "BLOCKED by Gate ⑪ (subagent preflight).\n\n"
+            f"Agent prompt mentions protected paths alongside edit verbs:\n"
+            + "\n".join(f"  - {h}" for h in hits[:5]) +
+            "\n\nIn enforced mode, dispatching a subagent that may write "
+            "to protected paths is rejected. Options:\n"
+            "  1. Remove the protected-path mentions from the prompt\n"
+            "  2. Handle the change in the main session (Gate ⑦ applies)\n"
+            "  3. Drop to advisory mode if this is intentional"
+        )
+
+    # Advisory in non-enforced modes
+    event_log.append_event(
+        gate="11", outcome="advisory", actor="claude",
+        file_path="(Agent tool)", detail={**detail, "mode": mode},
+        repo_root=repo_root,
     )
 
 
@@ -472,6 +636,12 @@ def _main_impl() -> None:
 
     repo_root = resolve_repo_root(event.get("cwd") if event else None)
     tool_name = extract_tool_name(event)
+
+    # Gate ⑪ fires on Task (Agent) tool calls — before gate_7 / gate_6 etc.
+    if tool_name in ("Task", "Agent"):
+        tool_input = extract_tool_input(event)
+        gate_11_subagent_preflight(repo_root, tool_input)
+        emit_continue(event_name="PreToolUse")
 
     if not tool_mutates_repo(tool_name):
         emit_continue(event_name="PreToolUse")
@@ -516,9 +686,26 @@ def _main_impl() -> None:
 
 def main() -> None:
     _HOOK = "pre_tool_use"
-    if _circuit_check is not None:
+    # Test-only bypass: unit tests set this env var to exercise gate logic
+    # regardless of circuit breaker state. NEVER set this in regular runs —
+    # the variable is explicitly checked against the literal sentinel below.
+    _test_bypass = os.environ.get("CLAUDE_HARNESS_TEST_BYPASS_CIRCUIT", "") == "1"
+    if _circuit_check is not None and not _test_bypass:
         _disabled, _reason = _circuit_check(_HOOK)
         if _disabled:
+            # Fail-closed on tripped (auto-disabled by repeated failures):
+            # a broken gate hook must not silently drop enforcement.
+            _severity = _circuit_severity(_HOOK) if _circuit_severity else "tripped"
+            if _severity == "tripped":
+                from common import emit_block
+                emit_block(
+                    "BLOCKED: pre_tool_use hook auto-disabled by circuit breaker "
+                    "(consecutive failures). Refusing to proceed without Layer 3 "
+                    "enforcement.\n\n"
+                    f"{_reason}\n\n"
+                    "Investigate the failure reason, fix the root cause, then reset."
+                )
+            # Manual disable (maintenance) → pass-through, user-authorized.
             from common import emit_continue
             emit_continue(system_message=_reason, event_name="")
     try:

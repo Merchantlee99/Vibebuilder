@@ -1,0 +1,25 @@
+{
+  "_comment": "Recommended MCP server set for solo Claude harness. Copy to .claude/mcp.json and uncomment servers you use. See .claude/playbooks/mcp.md for selection rubric.",
+  "mcpServers": {
+    "_filesystem_example": {
+      "_note": "Sandboxed fs access. Rename key to 'filesystem' to enable.",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/allowed/dir"]
+    },
+    "_claude_in_chrome_example": {
+      "_note": "Browser automation. Preferred over computer-use for web tasks. Install the Chrome extension first.",
+      "command": "claude-in-chrome",
+      "args": []
+    },
+    "_computer_use_example": {
+      "_note": "Native desktop automation. Requires accessibility grant per app. Only when browser/terminal insufficient.",
+      "command": "computer-use-mcp",
+      "args": []
+    },
+    "_scheduled_tasks_example": {
+      "_note": "Long-running / recurring tasks. Pairs with Automation-Intent.md.",
+      "command": "scheduled-tasks-mcp",
+      "args": []
+    }
+  }
+}

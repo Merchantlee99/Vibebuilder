@@ -1,0 +1,37 @@
+{
+  "_note": "Recommended Claude Code plugins for solo harness. `locked` means the user explicitly opted in; `suggested` are just recommendations.",
+  "schema_version": 1,
+  "locked": [],
+  "suggested": [
+    {
+      "name": "codex:rescue",
+      "purpose": "Defense-in-depth: delegate to Codex when Claude is stuck",
+      "when_to_use": "Claude repeatedly blocks on the same gate, or user explicitly asks for a second opinion"
+    },
+    {
+      "name": "codex:setup",
+      "purpose": "Check Codex CLI availability",
+      "when_to_use": "Before first use of codex:rescue"
+    },
+    {
+      "name": "claude-code-guide",
+      "purpose": "Authoritative Q&A on Claude Code features, hooks, SDK, API",
+      "when_to_use": "Any question about how Claude Code itself works"
+    },
+    {
+      "name": "anthropic-skills:consolidate-memory",
+      "purpose": "Reflective pass over global auto memory — merge duplicates, prune stale",
+      "when_to_use": "After a major project milestone or when memory feels noisy"
+    },
+    {
+      "name": "anthropic-skills:skill-creator",
+      "purpose": "Create / optimize / eval skills",
+      "when_to_use": "Promoting from `.claude/skills/_evolving/` to `_manual/`"
+    },
+    {
+      "name": "anthropic-skills:schedule",
+      "purpose": "Scheduled tasks (cron-style)",
+      "when_to_use": "Automation-Intent.md cadence_hint = scheduled"
+    }
+  ]
+}

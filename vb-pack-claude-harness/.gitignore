@@ -1,19 +1,49 @@
-# Runtime state (generated per-project, not shipped)
-.DS_Store
-__pycache__/
-*.py[cod]
+# Runtime-generated harness state — MUST NOT be committed to template repo.
+# bootstrap.py recreates these as empty.
+
+# Append-only logs (per-project, user-local)
 .claude/events.jsonl
 .claude/events.jsonl.seg-*
 .claude/learnings.jsonl
 .claude/learnings.jsonl.seg-*
-.claude/audits/
-.claude/reviews/*.md
-.claude/direction-checks/*.md
-.claude/spikes/
-.claude/test-runs/
-.claude/ephemeral/
-.claude/memory/session-index.sqlite
-.claude/parallel-spike.flag
+
+# Runtime state (hook_health timestamps, pending proposals, etc.)
+.claude/runtime.json
+
+# Per-session scratch
 .claude/context-snapshot.md
-*.bak
-*.bak-*
+.claude/ephemeral/
+.claude/test-runs/
+
+# Gate artifacts (produced during work)
+.claude/reviews/
+.claude/direction-checks/
+.claude/spikes/
+.claude/audits/
+
+# Gate flags
+.claude/parallel-spike.flag
+
+# Project memory (user-local)
+.claude/memory/
+
+# Auto-generated skills awaiting approval
+.claude/skills/_evolving/
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Editor / OS
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# Generated context state (per-project, user-local)
+.claude/context/automation-intents.json
+.claude/context/ownership.json
+.claude/context/subagent-tasks.json
+.claude/context/session.json
+.claude/context/activity-state.json

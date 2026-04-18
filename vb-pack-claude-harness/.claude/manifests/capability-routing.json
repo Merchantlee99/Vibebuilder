@@ -1,0 +1,86 @@
+{
+  "version": 1,
+  "_note": "Maps task kind → (tool, role) for Claude Code. Advisory, read by hooks/external tooling to suggest routing. JSON (no yaml dep).",
+  "defaults": {
+    "orchestrator_tool": "main-session",
+    "worker_tool": "Agent",
+    "reviewer_tool": "Agent"
+  },
+  "routes": {
+    "codebase_question": {
+      "tool": "Agent", "role": "explorer",
+      "subagent_type": "Explore",
+      "note": "Specific, bounded, read-only question about the codebase."
+    },
+    "codebase_exploration_broad": {
+      "tool": "Agent", "role": "explorer",
+      "subagent_type": "Explore", "thoroughness": "very_thorough",
+      "note": "Multi-area research spanning many files."
+    },
+    "bounded_implementation": {
+      "tool": "Agent", "role": "worker",
+      "subagent_type": "general-purpose", "isolation": "worktree",
+      "note": "Disjoint write scope, worktree-first for safety."
+    },
+    "independent_review": {
+      "tool": "Agent", "role": "reviewer",
+      "subagent_type": "general-purpose",
+      "note": "Regression scan; does not patch the reviewed scope."
+    },
+    "implementation_plan": {
+      "tool": "Agent", "role": "planner",
+      "subagent_type": "Plan",
+      "note": "Architecture + step-by-step plan, no edits."
+    },
+    "docs_lookup": {
+      "tool": "WebFetch", "role": "main-session",
+      "note": "Public docs, cited research. Prefer over browser session."
+    },
+    "library_api_lookup": {
+      "tool": "mcp__context7__query-docs", "role": "main-session",
+      "note": "SDK/framework API queries. Pin by library id first."
+    },
+    "current_research": {
+      "tool": "WebSearch", "role": "main-session",
+      "note": "When target URL is unknown."
+    },
+    "browser_qa": {
+      "tool": "mcp__Claude_in_Chrome__*", "role": "main-session",
+      "note": "DOM-aware web UI validation. Install Chrome extension first."
+    },
+    "gui_blocked_or_auth_heavy": {
+      "tool": "mcp__computer-use__*", "role": "main-session",
+      "note": "Only when browser and terminal are insufficient."
+    },
+    "recurring_followup": {
+      "tool": "ScheduleWakeup", "role": "main-session",
+      "note": "Self-paced continuation. Or use anthropic-skills:schedule for cron."
+    },
+    "long_task_continuity": {
+      "tool": "anthropic-skills:schedule", "role": "main-session",
+      "note": "Task spanning multiple days. Pairs with Automation-Intent.md."
+    },
+    "git_state_inspection": {
+      "tool": "Bash", "role": "main-session",
+      "note": "git status, log, diff. Read-only."
+    },
+    "repro_or_tests": {
+      "tool": "Bash", "role": "main-session",
+      "note": "Deterministic commands, environment checks."
+    },
+    "claude_feature_question": {
+      "tool": "Agent", "role": "explorer",
+      "subagent_type": "claude-code-guide",
+      "note": "Questions about Claude Code CLI, SDK, or API."
+    },
+    "emergency_fallback": {
+      "tool": "codex:rescue", "role": "main-session",
+      "note": "When Claude is stuck. Second-opinion / rescue path only."
+    }
+  },
+  "hints": {
+    "worktree_required_for": ["bounded_implementation", "high_risk_refactor"],
+    "browser_first_over_computer_use": true,
+    "webfetch_first_over_browser": true
+  }
+}

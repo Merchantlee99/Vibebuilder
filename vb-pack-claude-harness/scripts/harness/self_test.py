@@ -49,6 +49,14 @@ EXPECTED_HARNESS_SCRIPTS = [
     "runtime_gate.py",
     "hook_health.py",
     "self_test.py",
+    "bootstrap.py",
+    "invoke_reviewer.py",
+    "append_only_lock.py",
+    "subagent_planner.py",
+    "automation_planner.py",
+    "mcp_audit.py",
+    "activity_replay.py",
+    "protected_paths.py",
 ]
 
 EXPECTED_CORE_DOCS = [

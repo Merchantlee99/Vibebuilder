@@ -1,0 +1,75 @@
+{
+  "version": 1,
+  "_note": "Solo-Claude subagent role declarations. Used by scripts/harness/subagent_planner.py for ownership claims + dispatch spec generation. JSON because pyyaml is not a hard dependency.",
+  "roles": {
+    "orchestrator": {
+      "subagent_type": null,
+      "can_delegate": true,
+      "write_scope": "planning-and-docs",
+      "default_isolation": "none",
+      "purpose": "Task decomposition, routing, integration, final delivery."
+    },
+    "explorer": {
+      "subagent_type": "Explore",
+      "can_delegate": false,
+      "write_scope": "none",
+      "default_isolation": "none",
+      "purpose": "Answer a narrow codebase question with concrete file references."
+    },
+    "worker": {
+      "subagent_type": "general-purpose",
+      "can_delegate": false,
+      "write_scope": "assigned-only",
+      "default_isolation": "worktree",
+      "purpose": "Implement a bounded slice without touching other owned paths."
+    },
+    "reviewer": {
+      "subagent_type": "general-purpose",
+      "can_delegate": false,
+      "write_scope": ".claude/reviews/**",
+      "default_isolation": "none",
+      "purpose": "Review for bugs, regressions, missing tests, rollback risk."
+    },
+    "planner": {
+      "subagent_type": "Plan",
+      "can_delegate": false,
+      "write_scope": "none",
+      "default_isolation": "none",
+      "purpose": "Produce a step-by-step implementation plan without editing code."
+    }
+  },
+  "defaults": {
+    "shared_read_scope": [
+      "Prompt.md", "PRD.md", "Plan.md",
+      "Implement.md", "Documentation.md", "Subagent-Manifest.md"
+    ],
+    "protected_paths": [
+      "CLAUDE.md",
+      "AGENTS.md",
+      "ETHOS.md",
+      ".claude/hooks/**",
+      ".claude/sealed-prompts/**",
+      ".claude/manifests/**",
+      ".claude/playbooks/**",
+      ".claude/runtime.json",
+      ".claude/events.jsonl",
+      ".claude/learnings.jsonl",
+      "scripts/harness/**"
+    ]
+  },
+  "parallelism": {
+    "max_active_workers": 3,
+    "ownership_state": ".claude/context/ownership.json"
+  },
+  "required_contract": [
+    "goal", "owner", "read_scope", "write_scope",
+    "stop_condition", "validation", "forbidden_paths"
+  ],
+  "rules": [
+    "one_write_owner_per_path",
+    "do_not_delegate_immediate_blocker",
+    "worktree_first_for_worker_edits",
+    "reviewer_does_not_patch_same_scope_by_default",
+    "worker_reports_changed_files_and_validation"
+  ]
+}

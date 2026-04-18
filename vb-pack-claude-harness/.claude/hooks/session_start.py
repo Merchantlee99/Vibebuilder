@@ -106,6 +106,25 @@ def build_snapshot(repo_root: Path) -> str:
             lines.append("Harness changes are frozen until the audit completes.")
             lines.append("")
 
+    # Plugins drift check
+    lock = repo_root / ".claude" / "plugins.lock"
+    if lock.exists():
+        try:
+            data = json.loads(lock.read_text(encoding="utf-8"))
+            locked = [p.get("name") if isinstance(p, dict) else str(p)
+                      for p in data.get("locked", [])]
+            if locked:
+                lines.append("## Plugins (pinned)")
+                lines.append("")
+                for name in locked:
+                    lines.append(f"- `{name}`")
+                lines.append("")
+                lines.append("Drift detection: run `/plugin list` and compare. "
+                             "Unpinned active plugins are advisory, pinned-but-missing are warnings.")
+                lines.append("")
+        except json.JSONDecodeError:
+            pass
+
     # Trust-boundary reminder (Layer 3: Gate ⑨)
     lines.append("## Trust-Boundary Reminder")
     lines.append("")

@@ -28,18 +28,34 @@ EPHEMERAL_SESSION_FALLBACK_DIR = "/tmp"
 EPHEMERAL_SESSION_PREFIX = "claude-harness-ephemeral-session-"
 
 
-def _resolve_session_id() -> str:
-    """Return a non-empty session id.
+# In-process memo — survives disk-write failures within a single process.
+# Without this, all-candidates-unwritable paths mint a fresh UUID per call
+# and break per-session Gate ⑥ / Gate ② correlation.
+_SESSION_ID_MEMO: Optional[str] = None
 
-    Resolution order:
+
+def _resolve_session_id() -> str:
+    """Return a non-empty, **stable-within-process** session id.
+
+    Resolution order (first success wins, then memoized):
       1. CLAUDE_SESSION_ID env var
-      2. Project-local day cache (survives reboots / tmp cleaners)
-      3. /tmp fallback
-      4. Newly minted ephemeral-<uuid12>
+      2. In-process memo from earlier call
+      3. Project-local day cache (survives reboots / tmp cleaners)
+      4. /tmp day cache fallback
+      5. Process-level tempdir fallback (tempfile.gettempdir)
+      6. Newly minted ephemeral-<uuid12> — persisted to first writable
+         candidate, then always memoized so subsequent calls match.
     """
+    global _SESSION_ID_MEMO
+
     sid = os.environ.get("CLAUDE_SESSION_ID", "").strip()
     if sid:
+        _SESSION_ID_MEMO = sid
         return sid
+
+    if _SESSION_ID_MEMO:
+        return _SESSION_ID_MEMO
+
     day = time.strftime("%Y%m%d", time.gmtime())
     filename = f"{EPHEMERAL_SESSION_PREFIX}{day}.id"
 
@@ -50,12 +66,18 @@ def _resolve_session_id() -> str:
     except Exception:
         pass
     candidates.append(Path(EPHEMERAL_SESSION_FALLBACK_DIR) / filename)
+    try:
+        import tempfile
+        candidates.append(Path(tempfile.gettempdir()) / filename)
+    except Exception:
+        pass
 
     for cache in candidates:
         try:
             if cache.exists():
                 cached = cache.read_text(encoding="utf-8").strip()
                 if cached:
+                    _SESSION_ID_MEMO = cached
                     return cached
         except OSError:
             continue
@@ -68,6 +90,9 @@ def _resolve_session_id() -> str:
             break
         except OSError:
             continue
+    # Memoize regardless of whether persist succeeded — in-process stability
+    # is the invariant Gate ⑥ depends on.
+    _SESSION_ID_MEMO = new_sid
     return new_sid
 
 
@@ -84,11 +109,17 @@ def event_log_path(repo_root: Optional[Path] = None) -> Path:
     return root / HARNESS_DIR_NAME / EVENT_LOG_NAME
 
 
-def iter_all_events(repo_root: Optional[Path] = None):
+def iter_all_events(repo_root: Optional[Path] = None,
+                     include_synthesized: bool = True):
     """Yield every event from all segments + the live file, in order.
 
     Rotation creates `events.jsonl.seg-<ts>` (optionally .gz). Any reader
     that needs historical state MUST iterate via this helper.
+
+    include_synthesized=False filters out events with `detail.synthesized=True`
+    (events recovered by activity_replay.py after a hook-gap window).
+    Gate ⑥ scope accumulation should use False to avoid counting replayed
+    edits as real cumulative LOC.
     """
     live = event_log_path(repo_root)
     parent = live.parent
@@ -108,9 +139,14 @@ def iter_all_events(repo_root: Optional[Path] = None):
                     if not line:
                         continue
                     try:
-                        yield json.loads(line)
+                        ev = json.loads(line)
                     except json.JSONDecodeError:
                         continue
+                    if not include_synthesized:
+                        detail = ev.get("detail") or {}
+                        if detail.get("synthesized"):
+                            continue
+                    yield ev
         except OSError:
             return
 
