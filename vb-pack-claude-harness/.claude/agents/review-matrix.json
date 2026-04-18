@@ -1,0 +1,55 @@
+{
+  "version": "1.0",
+  "policy": "unified-4-axis-pipeline",
+  "default_can_challenge": "all-other-roles",
+  "dispatch": {
+    "default_max_parallel": 2
+  },
+  "stages": [
+    {
+      "name": "plan",
+      "builder": "planner",
+      "max_parallel": 3,
+      "required_reviewers": ["plan-redteam", "risk-reviewer"],
+      "artifact_gate": "plans/PLAN-*.md",
+      "exit_condition": "required_reviewers all record verdict ∈ {accept, revise}"
+    },
+    {
+      "name": "tests",
+      "builder": "test-implementer",
+      "max_parallel": 2,
+      "required_reviewers": ["tests-redteam", "verifier"],
+      "artifact_gate": "tests/**",
+      "exit_condition": "failing_tests_committed gate flag true"
+    },
+    {
+      "name": "implementation",
+      "builder": "implementer",
+      "max_parallel": 3,
+      "required_reviewers": ["diff-redteam", "risk-reviewer", "verifier"],
+      "artifact_gate": "src/** lib/** internal/** cmd/** apps/**",
+      "exit_condition": "implementation_verified gate flag true"
+    },
+    {
+      "name": "verification",
+      "builder": "verifier",
+      "max_parallel": 2,
+      "required_reviewers": ["diff-redteam", "risk-reviewer"],
+      "artifact_gate": ".claude/audits/verification-*.md",
+      "exit_condition": "deterministic_verified gate flag true"
+    },
+    {
+      "name": "postmortem",
+      "builder": "failure-analyst",
+      "max_parallel": 1,
+      "required_reviewers": ["risk-reviewer"],
+      "artifact_gate": ".claude/audits/postmortem-*.md",
+      "exit_condition": "learnings.jsonl entry recorded"
+    }
+  ],
+  "invariants": {
+    "actor_crossover": true,
+    "sealed_prompt_fingerprint_required": true,
+    "rollback_triggers_required_for_code_reviews": true
+  }
+}

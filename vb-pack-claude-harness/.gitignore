@@ -1,0 +1,19 @@
+# Runtime state (generated per-project, not shipped)
+.DS_Store
+__pycache__/
+*.py[cod]
+.claude/events.jsonl
+.claude/events.jsonl.seg-*
+.claude/learnings.jsonl
+.claude/learnings.jsonl.seg-*
+.claude/audits/
+.claude/reviews/*.md
+.claude/direction-checks/*.md
+.claude/spikes/
+.claude/test-runs/
+.claude/ephemeral/
+.claude/memory/session-index.sqlite
+.claude/parallel-spike.flag
+.claude/context-snapshot.md
+*.bak
+*.bak-*

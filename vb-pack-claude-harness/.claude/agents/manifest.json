@@ -1,0 +1,107 @@
+{
+  "version": "2.0-solo",
+  "description": "Solo-Claude role manifest. builder = claude (this session). reviewer = user (human) or optional claude-reviewer (isolated session). No Codex path.",
+  "roles": [
+    {
+      "id": "planner",
+      "kind": "builder",
+      "performed_by": "claude",
+      "prompt": ".claude/sealed-prompts/planner.md",
+      "sandbox": "workspace-write",
+      "writes": ["plans/**", "Plan.md", "PRD.md"],
+      "reads": ["Prompt.md", "PRD.md", "Plan.md", "Implement.md", "Documentation.md", "docs/**", "README.md"],
+      "produces": ["plans/PLAN-*.md"],
+      "note": "Claude drafts. Review happens in plan-redteam role below."
+    },
+    {
+      "id": "plan-redteam",
+      "kind": "reviewer",
+      "performed_by": ["user", "claude-reviewer"],
+      "prompt": ".claude/sealed-prompts/plan-redteam.md",
+      "sandbox": "read-only",
+      "writes": [".claude/reviews/plan-redteam-*.md"],
+      "reads": ["plans/**", "PRD.md", "Plan.md", "docs/**"],
+      "produces": [".claude/reviews/plan-redteam-*.md"],
+      "note": "User reads the plan fresh. Alternatively, an isolated Claude session reviews without shared context."
+    },
+    {
+      "id": "test-implementer",
+      "kind": "builder",
+      "performed_by": "claude",
+      "prompt": ".claude/sealed-prompts/implement-tests.md",
+      "sandbox": "workspace-write",
+      "writes": ["tests/**", "Implement.md"],
+      "reads": ["plans/**", "docs/**", "src/**"],
+      "produces": ["tests/**"]
+    },
+    {
+      "id": "tests-redteam",
+      "kind": "reviewer",
+      "performed_by": ["user", "claude-reviewer"],
+      "prompt": ".claude/sealed-prompts/tests-redteam.md",
+      "sandbox": "read-only",
+      "writes": [".claude/reviews/tests-redteam-*.md"],
+      "reads": ["tests/**", "plans/**", "docs/**"],
+      "produces": [".claude/reviews/tests-redteam-*.md"]
+    },
+    {
+      "id": "implementer",
+      "kind": "builder",
+      "performed_by": "claude",
+      "prompt": ".claude/sealed-prompts/implement-code.md",
+      "sandbox": "workspace-write",
+      "writes": ["src/**", "lib/**", "internal/**", "cmd/**", "apps/**", "Implement.md"],
+      "reads": ["plans/**", "tests/**", "docs/**"],
+      "produces": ["src/**"]
+    },
+    {
+      "id": "diff-redteam",
+      "kind": "reviewer",
+      "performed_by": ["user", "claude-reviewer"],
+      "prompt": ".claude/sealed-prompts/diff-redteam.md",
+      "sandbox": "read-only",
+      "writes": [".claude/reviews/diff-redteam-*.md"],
+      "reads": ["**"],
+      "produces": [".claude/reviews/diff-redteam-*.md"]
+    },
+    {
+      "id": "risk-reviewer",
+      "kind": "reviewer",
+      "performed_by": ["user", "claude-reviewer"],
+      "prompt": ".claude/sealed-prompts/risk-reviewer.md",
+      "sandbox": "read-only",
+      "writes": [".claude/reviews/risk-reviewer-*.md"],
+      "reads": ["**"],
+      "produces": [".claude/reviews/risk-reviewer-*.md"]
+    },
+    {
+      "id": "verifier",
+      "kind": "deterministic",
+      "performed_by": "gate_4_runner",
+      "prompt": ".claude/sealed-prompts/verifier.md",
+      "sandbox": "read-only",
+      "writes": [".claude/audits/verification-*.md"],
+      "reads": ["**"],
+      "produces": [".claude/test-runs/run-*.log"],
+      "note": "Automated via .claude/hooks/gate_4_runner.py — ruff/mypy/pytest/npm/go auto-detected."
+    },
+    {
+      "id": "failure-analyst",
+      "kind": "analyst",
+      "performed_by": ["claude", "user"],
+      "prompt": ".claude/sealed-prompts/failure-analysis.md",
+      "sandbox": "workspace-write",
+      "writes": [".claude/learnings.jsonl", "Documentation.md", ".claude/audits/postmortem-*.md"],
+      "reads": ["**"],
+      "produces": [".claude/audits/postmortem-*.md"]
+    }
+  ],
+  "actor_values": {
+    "claude": "primary author session (this Claude Code session)",
+    "user": "human — reads diffs/plans independently and records verdict",
+    "claude-reviewer": "optional isolated Claude session for fresh-eye review",
+    "system": "automated tooling (hooks, runners)",
+    "bash": "synthesized by bash_write_probe for Bash-tool writes"
+  },
+  "actor_crossover_rule": "Gate ② P2-F rejects self-review: review-needed.actor must differ from the actor that records `02 pass`. In solo mode, typical pairs are (claude→user), (claude→claude-reviewer)."
+}
