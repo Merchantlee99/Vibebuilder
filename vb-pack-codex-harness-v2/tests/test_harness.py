@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import hashlib
+import hmac
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -15,6 +18,9 @@ except ModuleNotFoundError:
 
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "scripts" / "harness"))
+
+from event_log import canonical_event  # noqa: E402
 
 
 def parse_config(path: Path) -> dict:
@@ -72,6 +78,7 @@ class HarnessStructureTest(unittest.TestCase):
             ROOT / "harness/telemetry/events.jsonl",
             ROOT / "harness/telemetry/learnings.jsonl",
             ROOT / "harness/telemetry/events.lock",
+            ROOT / "harness/telemetry/events.manifest.json",
             ROOT / "harness/context/ownership-claims.json",
             ROOT / "harness/context/automation-intents.json",
             ROOT / "harness/context/session-index.sqlite3",
@@ -79,16 +86,23 @@ class HarnessStructureTest(unittest.TestCase):
         ]:
             if path.exists():
                 path.unlink()
+        segments = ROOT / "harness/telemetry/segments"
+        if segments.exists():
+            shutil.rmtree(segments)
         for path in (ROOT / "harness/reviews").glob("review-*.md"):
             path.unlink()
 
-    def run_cmd(self, *args: str) -> subprocess.CompletedProcess[str]:
+    def run_cmd(self, *args: str, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
+        proc_env = os.environ.copy()
+        if env:
+            proc_env.update(env)
         return subprocess.run(
             [sys.executable, *args],
             cwd=ROOT,
             text=True,
             capture_output=True,
             check=False,
+            env=proc_env,
         )
 
     def test_runtime_is_outside_codex(self) -> None:
@@ -280,13 +294,21 @@ class HarnessStructureTest(unittest.TestCase):
         proc = self.run_cmd("scripts/harness/harness.py", "classify", "권한", "결제", "수정")
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
         self.assertEqual(proc.stdout.strip(), "high-risk")
+        verify = self.run_cmd("scripts/harness/harness.py", "events", "verify")
+        self.assertEqual(verify.returncode, 0, verify.stdout + verify.stderr)
+        quality = self.run_cmd("scripts/harness/harness.py", "quality", "--tier", "high-risk", "--template", "--json")
+        self.assertEqual(quality.returncode, 0, quality.stdout + quality.stderr)
 
     def test_learning_detector_canonicalizes_error_order(self) -> None:
         events = ROOT / "harness/telemetry/events.jsonl"
+        manifest = ROOT / "harness/telemetry/events.manifest.json"
         old = events.read_text(encoding="utf-8") if events.exists() else None
+        old_manifest = manifest.read_text(encoding="utf-8") if manifest.exists() else None
         try:
             if events.exists():
                 events.unlink()
+            if manifest.exists():
+                manifest.unlink()
             self.run_cmd(
                 "scripts/harness/event_log.py",
                 "event",
@@ -317,6 +339,11 @@ class HarnessStructureTest(unittest.TestCase):
                     events.unlink()
             else:
                 events.write_text(old, encoding="utf-8")
+            if old_manifest is None:
+                if manifest.exists():
+                    manifest.unlink()
+            else:
+                manifest.write_text(old_manifest, encoding="utf-8")
 
     def test_automation_scan_ignores_accepted_review(self) -> None:
         review_dir = ROOT / "harness/reviews"
@@ -342,10 +369,14 @@ class HarnessStructureTest(unittest.TestCase):
 
     def test_event_log_hash_chain_detects_tamper(self) -> None:
         events = ROOT / "harness/telemetry/events.jsonl"
+        manifest = ROOT / "harness/telemetry/events.manifest.json"
         old = events.read_text(encoding="utf-8") if events.exists() else None
+        old_manifest = manifest.read_text(encoding="utf-8") if manifest.exists() else None
         try:
             if events.exists():
                 events.unlink()
+            if manifest.exists():
+                manifest.unlink()
             self.run_cmd("scripts/harness/event_log.py", "event", "--kind", "test.event")
             verify = self.run_cmd("scripts/harness/event_log.py", "verify")
             self.assertEqual(verify.returncode, 0, verify.stdout + verify.stderr)
@@ -359,6 +390,126 @@ class HarnessStructureTest(unittest.TestCase):
                     events.unlink()
             else:
                 events.write_text(old, encoding="utf-8")
+            if old_manifest is None:
+                if manifest.exists():
+                    manifest.unlink()
+            else:
+                manifest.write_text(old_manifest, encoding="utf-8")
+
+    def test_event_log_canonicalizes_unicode_nfc(self) -> None:
+        base = {
+            "id": "event-1",
+            "ts": "20260101T000000Z",
+            "kind": "unicode.test",
+            "actor": "test",
+            "status": "ok",
+            "data": {"value": "cafe\u0301"},
+            "prev_hash": "",
+        }
+        equivalent = {**base, "data": {"value": "café"}}
+        self.assertEqual(canonical_event(base), canonical_event(equivalent))
+
+    def test_event_log_rotation_preserves_and_verifies_segment_chain(self) -> None:
+        events = ROOT / "harness/telemetry/events.jsonl"
+        manifest = ROOT / "harness/telemetry/events.manifest.json"
+        segments = ROOT / "harness/telemetry/segments"
+        for path in [events, manifest]:
+            if path.exists():
+                path.unlink()
+        if segments.exists():
+            shutil.rmtree(segments)
+        try:
+            first = self.run_cmd("scripts/harness/event_log.py", "event", "--kind", "rotate.first")
+            self.assertEqual(first.returncode, 0, first.stdout + first.stderr)
+            rotated = self.run_cmd("scripts/harness/event_log.py", "rotate", "--force")
+            self.assertEqual(rotated.returncode, 0, rotated.stdout + rotated.stderr)
+            second = self.run_cmd("scripts/harness/event_log.py", "event", "--kind", "rotate.second")
+            self.assertEqual(second.returncode, 0, second.stdout + second.stderr)
+            verify = self.run_cmd("scripts/harness/event_log.py", "verify")
+            self.assertEqual(verify.returncode, 0, verify.stdout + verify.stderr)
+            segment_files = sorted(segments.glob("*.jsonl"))
+            self.assertEqual(len(segment_files), 1)
+            text = segment_files[0].read_text(encoding="utf-8").replace("rotate.first", "rotate.tampered")
+            segment_files[0].write_text(text, encoding="utf-8")
+            verify = self.run_cmd("scripts/harness/event_log.py", "verify")
+            self.assertNotEqual(verify.returncode, 0)
+        finally:
+            for path in [events, manifest]:
+                if path.exists():
+                    path.unlink()
+            if segments.exists():
+                shutil.rmtree(segments)
+
+    def test_review_finalize_can_require_hmac_approval(self) -> None:
+        proc = self.run_cmd(
+            "scripts/harness/review_gate.py",
+            "prepare",
+            "--tier",
+            "normal",
+            "--producer",
+            "hmac-producer",
+            "--producer-session",
+            "main",
+            "--reviewer",
+            "hmac-reviewer",
+            "--reviewer-session",
+            "reviewer-session",
+        )
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        review_path = proc.stdout.strip()
+        path = ROOT / review_path
+        try:
+            text = path.read_text(encoding="utf-8")
+            nonce = text.split("Review-Nonce: `", 1)[1].split("`", 1)[0]
+            text = text.replace("Verdict: pending", "Verdict: accept")
+            text = text.replace("## Scope Reviewed\n", "## Scope Reviewed\n\nReviewed HMAC protected scope.\n", 1)
+            text = text.replace("## Validation Reviewed\n", "## Validation Reviewed\n\nReviewed HMAC protected validation.\n", 1)
+            text = text.replace("## Residual Risk\n", "## Residual Risk\n\nNo residual risk in HMAC review test.\n", 1)
+            path.write_text(text, encoding="utf-8")
+            bad = self.run_cmd(
+                "scripts/harness/review_gate.py",
+                "finalize",
+                "--review-file",
+                review_path,
+                "--hmac-secret-env",
+                "HARNESS_REVIEW_SECRET",
+                env={"HARNESS_REVIEW_SECRET": "secret"},
+            )
+            self.assertNotEqual(bad.returncode, 0)
+            token = hmac.new(
+                b"secret",
+                f"{review_path}:{nonce}".encode("utf-8"),
+                hashlib.sha256,
+            ).hexdigest()
+            ok = self.run_cmd(
+                "scripts/harness/review_gate.py",
+                "finalize",
+                "--review-file",
+                review_path,
+                "--hmac-secret-env",
+                "HARNESS_REVIEW_SECRET",
+                "--approval-token",
+                token,
+                env={"HARNESS_REVIEW_SECRET": "secret"},
+            )
+            self.assertEqual(ok.returncode, 0, ok.stdout + ok.stderr)
+        finally:
+            if path.exists():
+                path.unlink()
+
+    def test_subagent_plan_records_planned_model(self) -> None:
+        proc = self.run_cmd(
+            "scripts/harness/subagent_planner.py",
+            "plan",
+            "--role",
+            "reviewer",
+            "--owner",
+            "model-reviewer",
+            "--goal",
+            "model policy check",
+        )
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        self.assertIn("planned_model: gpt-5.5", proc.stdout)
 
 
 if __name__ == "__main__":

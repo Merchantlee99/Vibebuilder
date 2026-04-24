@@ -8,25 +8,11 @@ import json
 import re
 from collections import Counter
 
-from common import ROOT
-from event_log import record_learning
-
-
-EVENTS = ROOT / "harness" / "telemetry" / "events.jsonl"
+from event_log import iter_events, record_learning
 
 
 def load_events() -> list[dict]:
-    if not EVENTS.exists():
-        return []
-    events = []
-    for line in EVENTS.read_text(encoding="utf-8").splitlines():
-        if not line.strip():
-            continue
-        try:
-            events.append(json.loads(line))
-        except json.JSONDecodeError:
-            continue
-    return events
+    return iter_events()
 
 
 def detect(threshold: int) -> list[dict]:

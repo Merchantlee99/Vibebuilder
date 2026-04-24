@@ -10,6 +10,7 @@ import sqlite3
 from pathlib import Path
 
 from common import ROOT
+from event_log import iter_events
 
 
 INDEX = ROOT / "harness" / "context" / "session-index.sqlite3"
@@ -36,10 +37,15 @@ def create_schema(conn: sqlite3.Connection) -> None:
 def iter_docs() -> list[tuple[str, str, str]]:
     docs: list[tuple[str, str, str]] = []
     for path in SOURCES:
-        if not path.exists():
+        if path != ROOT / "harness" / "telemetry" / "events.jsonl" and not path.exists():
             continue
         rel = str(path.relative_to(ROOT))
-        if path.suffix == ".jsonl":
+        if path == ROOT / "harness" / "telemetry" / "events.jsonl":
+            for idx, item in enumerate(iter_events(), start=1):
+                body = json.dumps(item, ensure_ascii=False, sort_keys=True)
+                source = item.get("data", {}).get("review_file") or item.get("id") or idx
+                docs.append((f"{rel}:{source}", path.stem, body))
+        elif path.suffix == ".jsonl":
             for idx, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
                 if not line.strip():
                     continue

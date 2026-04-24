@@ -38,6 +38,8 @@ python3 scripts/harness/automation_planner.py audit
 python3 scripts/harness/skillify_audit.py all
 python3 scripts/harness/session_index.py rebuild
 python3 scripts/harness/ops_metrics.py
+python3 scripts/harness/event_log.py verify
+python3 scripts/harness/event_log.py rotate --max-bytes 1048576
 ```
 
 `score.py` is a readiness score, not proof of real-world output quality. Use `ops_metrics.py`, review findings, validation evidence, and CI history for operational quality.
@@ -73,6 +75,34 @@ Use:
 ```bash
 python3 scripts/harness/event_log.py tail --log events
 python3 scripts/harness/event_log.py verify
+python3 scripts/harness/event_log.py rotate --force
 python3 scripts/harness/session_index.py search "review"
 python3 scripts/harness/ops_metrics.py
+```
+
+`events.jsonl` uses a SHA256 hash chain and `events.manifest.json` tracks rotated segments. Segment rotation improves forensic durability for older events, but it is not a replacement for external backup, git-based archival, or OS-level append-only file protection.
+
+## High-Trust Review Approval
+
+For sensitive work, require an external approval token during review finalize:
+
+```bash
+python3 scripts/harness/review_gate.py finalize \
+  --review-file harness/reviews/review-YYYYMMDDTHHMMSSZ.md \
+  --require-prepared-event \
+  --hmac-secret-env HARNESS_REVIEW_SECRET \
+  --approval-token <hmac-sha256(review_file:nonce)>
+```
+
+This is optional by design. It strengthens chain-of-trust when the secret is held outside the Codex session. If Codex has access to the secret, treat it as additional audit evidence, not proof of human identity.
+
+## Umbrella CLI
+
+`scripts/harness/harness.py` wraps the main maintenance commands so maintainers do not need to remember every script path:
+
+```bash
+python3 scripts/harness/harness.py events verify
+python3 scripts/harness/harness.py automation scan
+python3 scripts/harness/harness.py learning --threshold 2 --json
+python3 scripts/harness/harness.py subagent plan --role reviewer --owner reviewer --goal "review plan"
 ```

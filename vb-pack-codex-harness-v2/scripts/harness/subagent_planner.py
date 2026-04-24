@@ -12,6 +12,7 @@ from event_log import record_event
 
 CLAIMS_PATH = ROOT / "harness" / "context" / "ownership-claims.json"
 LOG_PATH = ROOT / "harness" / "telemetry" / "subagent-events.jsonl"
+MODEL_POLICY_PATH = ROOT / "harness" / "model_policy.json"
 
 READ_ONLY_ROLES = {
     "pm_strategist",
@@ -45,6 +46,20 @@ def default_mode(role: str, write_scope: list[str]) -> str:
     return "worktree"
 
 
+def planned_model_for_role(role: str) -> dict:
+    policy = load_json(MODEL_POLICY_PATH, {})
+    routing = policy.get("routing", {}) if isinstance(policy, dict) else {}
+    normalized = role.replace("-", "_")
+    fallback = "worker" if normalized not in READ_ONLY_ROLES else normalized
+    entry = routing.get(normalized) or routing.get(role) or routing.get(fallback) or {}
+    return {
+        "model_policy_role": normalized if normalized in routing else fallback,
+        "planned_model": entry.get("model", policy.get("frontier_model", "")),
+        "planned_reasoning_effort": entry.get("reasoning_effort", policy.get("default_reasoning_effort", "")),
+        "model_policy_source": str(MODEL_POLICY_PATH.relative_to(ROOT)),
+    }
+
+
 def plan(args: argparse.Namespace) -> int:
     mode = args.mode or default_mode(args.role, args.write_scope)
     if mode == "read-only" and args.write_scope:
@@ -76,6 +91,7 @@ def plan(args: argparse.Namespace) -> int:
             )
         return 1
 
+    model_plan = planned_model_for_role(args.role)
     dispatch = {
         "id": f"dispatch-{utc_slug()}",
         "role": args.role,
@@ -89,6 +105,7 @@ def plan(args: argparse.Namespace) -> int:
         "stop_condition": args.stop_condition,
         "expected_artifact": args.expected_artifact,
         "validation": args.validation,
+        **model_plan,
     }
 
     if args.claim and args.write_scope:
@@ -125,6 +142,8 @@ def render_dispatch(dispatch: dict) -> str:
         f"stop_condition: {dispatch['stop_condition']}",
         f"expected_artifact: {dispatch['expected_artifact']}",
         f"validation: {dispatch['validation']}",
+        f"planned_model: {dispatch.get('planned_model', '')}",
+        f"planned_reasoning_effort: {dispatch.get('planned_reasoning_effort', '')}",
     ]
     return "\n".join(lines)
 

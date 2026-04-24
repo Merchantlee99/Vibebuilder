@@ -8,6 +8,7 @@ import json
 from collections import Counter
 
 from common import ROOT
+from event_log import iter_events
 
 
 EVENTS = ROOT / "harness" / "telemetry" / "events.jsonl"
@@ -29,7 +30,7 @@ def load_jsonl(path):
 
 
 def metrics() -> dict:
-    events = load_jsonl(EVENTS)
+    events = iter_events()
     learnings = load_jsonl(LEARNINGS)
     by_kind = Counter(event.get("kind", "unknown") for event in events)
     by_status = Counter(event.get("status", "unknown") for event in events)
@@ -62,4 +63,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

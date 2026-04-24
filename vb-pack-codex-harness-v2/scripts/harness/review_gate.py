@@ -5,18 +5,17 @@ from __future__ import annotations
 
 import argparse
 import hashlib
-import json
+import hmac
+import os
 import sys
 from pathlib import Path
 
 from common import ROOT, parse_key_value_lines, nonempty_section, utc_slug, event_id
-from event_log import record_event
+from event_log import iter_events, record_event
 
 
 REVIEW_DIR = ROOT / "harness" / "reviews"
 TEMPLATE = ROOT / "templates" / "Review.md"
-EVENTS = ROOT / "harness" / "telemetry" / "events.jsonl"
-
 
 def latest_review() -> Path | None:
     files = sorted(REVIEW_DIR.glob("review-*.md"))
@@ -24,13 +23,7 @@ def latest_review() -> Path | None:
 
 
 def prepared_review_event(review_file: str) -> dict | None:
-    if not EVENTS.exists():
-        return None
-    for line in reversed(EVENTS.read_text(encoding="utf-8").splitlines()):
-        try:
-            event = json.loads(line)
-        except json.JSONDecodeError:
-            continue
+    for event in reversed(iter_events()):
         if event.get("kind") != "review.prepare":
             continue
         data = event.get("data", {})
@@ -47,6 +40,31 @@ def section_len(text: str, heading: str) -> int:
     import re
     match = re.search(rf"^## {re.escape(heading)}\s*$([\s\S]*?)(?=^## |\Z)", text, re.MULTILINE)
     return len(match.group(1).strip()) if match else 0
+
+
+def approval_token(secret: str, review_file: str, nonce: str) -> str:
+    payload = f"{review_file}:{nonce}".encode("utf-8")
+    return hmac.new(secret.encode("utf-8"), payload, hashlib.sha256).hexdigest()
+
+
+def verify_hmac_approval(args: argparse.Namespace, rel_review: str, nonce: str, errors: list[str]) -> bool:
+    if not args.hmac_secret_env:
+        return False
+    if not nonce:
+        errors.append("missing prepared review nonce for HMAC approval")
+        return False
+    secret = os.environ.get(args.hmac_secret_env, "")
+    if not secret:
+        errors.append(f"missing HMAC secret env: {args.hmac_secret_env}")
+        return False
+    if not args.approval_token:
+        errors.append("missing --approval-token for HMAC review approval")
+        return False
+    expected = approval_token(secret, rel_review, nonce)
+    if not hmac.compare_digest(expected, args.approval_token):
+        errors.append("invalid HMAC review approval token")
+        return False
+    return True
 
 
 def prepare(args: argparse.Namespace) -> int:
@@ -127,6 +145,7 @@ def finalize(args: argparse.Namespace) -> int:
             errors.append(f"review does not mention changed file: {changed}")
     rel_review = str(review.relative_to(ROOT))
     prepared = prepared_review_event(rel_review)
+    prepared_nonce = ""
     if prepared:
         data = prepared.get("data", {})
         if data.get("producer") and data.get("producer") != fields.get("Producer"):
@@ -137,12 +156,14 @@ def finalize(args: argparse.Namespace) -> int:
             errors.append("reviewer does not match prepared review event")
         if data.get("nonce") and data.get("nonce") not in text:
             errors.append("review nonce missing from review artifact")
+        prepared_nonce = data.get("nonce", "")
         if data.get("fingerprint") and not args.allow_modified_fingerprint:
             current_fingerprint = file_fingerprint(review)
             if current_fingerprint == data.get("fingerprint"):
                 errors.append("review artifact was not modified after prepare")
     elif args.require_prepared_event:
         errors.append("missing matching review.prepare event")
+    approval_verified = verify_hmac_approval(args, rel_review, prepared_nonce, errors)
 
     if errors:
         record_event(
@@ -168,6 +189,7 @@ def finalize(args: argparse.Namespace) -> int:
         verdict=fields["Verdict"],
         changed_files=args.changed_file,
         prepared_event=prepared.get("id") if prepared else "",
+        hmac_approval_verified=approval_verified,
     )
     print(f"review finalized: {review.relative_to(ROOT)}")
     return 0
@@ -192,6 +214,8 @@ def main() -> int:
     fin.add_argument("--require-prepared-event", action="store_true")
     fin.add_argument("--allow-modified-fingerprint", action="store_true")
     fin.add_argument("--min-section-chars", type=int, default=20)
+    fin.add_argument("--hmac-secret-env")
+    fin.add_argument("--approval-token")
 
     args = parser.parse_args()
     if args.command == "prepare":

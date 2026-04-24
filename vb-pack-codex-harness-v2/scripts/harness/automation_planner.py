@@ -4,17 +4,14 @@
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 
 from common import ROOT, append_jsonl, load_json, utc_slug, write_json
-from event_log import record_event
+from event_log import iter_events, record_event
 
 
 INTENTS_PATH = ROOT / "harness" / "context" / "automation-intents.json"
 LOG_PATH = ROOT / "harness" / "telemetry" / "automation-events.jsonl"
-EVENTS_PATH = ROOT / "harness" / "telemetry" / "events.jsonl"
-
 ALLOWED_KINDS = {
     "thread-heartbeat",
     "standalone",
@@ -127,13 +124,7 @@ def prepared_review_files() -> set[str]:
 
 def accepted_review_files() -> set[str]:
     files = set()
-    if not EVENTS_PATH.exists():
-        return files
-    for line in EVENTS_PATH.read_text(encoding="utf-8").splitlines():
-        try:
-            event = json.loads(line)
-        except json.JSONDecodeError:
-            continue
+    for event in iter_events():
         if event.get("kind") == "review.finalize" and event.get("status") == "accepted":
             review_file = event.get("data", {}).get("review_file")
             if review_file:
@@ -143,13 +134,7 @@ def accepted_review_files() -> set[str]:
 
 def review_event_files(kind: str) -> set[str]:
     files = set()
-    if not EVENTS_PATH.exists():
-        return files
-    for line in EVENTS_PATH.read_text(encoding="utf-8").splitlines():
-        try:
-            event = json.loads(line)
-        except json.JSONDecodeError:
-            continue
+    for event in iter_events():
         if event.get("kind") == kind:
             review_file = event.get("data", {}).get("review_file")
             if review_file:

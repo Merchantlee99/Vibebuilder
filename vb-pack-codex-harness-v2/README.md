@@ -93,6 +93,8 @@ python3 scripts/harness/skillify_audit.py all
 python3 scripts/harness/quality_gate.py --tier high-risk --template
 python3 scripts/harness/session_index.py rebuild
 python3 scripts/harness/score.py --min-score 95
+python3 scripts/harness/event_log.py verify
+python3 scripts/harness/event_log.py rotate --force
 ```
 
 ## Enforcement 모델
@@ -107,8 +109,11 @@ python3 scripts/harness/score.py --min-score 95
 - `subagent_planner.py --claim`으로 write-scope 충돌을 방지합니다.
 - automation intent와 proposed skill을 승격 전에 audit합니다.
 - `events.jsonl`, `learnings.jsonl`, `session_index.py`로 장기 작업 이력을 재구성합니다.
-- `event_log.py verify`로 append-only event hash chain을 검증합니다.
+- `event_log.py verify`로 NFC-normalized append-only event hash chain과 rotated segment manifest를 검증합니다.
+- `event_log.py rotate --force` 또는 `--max-bytes`로 오래된 이벤트를 `harness/telemetry/segments/`에 보관합니다. 이는 과거 로그의 wholesale 삭제 리스크를 줄이지만, 외부 백업이나 OS-level append-only 보호를 대체하지는 않습니다.
 - `quality_gate.py`로 artifact의 형식뿐 아니라 validation/rollback/review 증거 품질을 점검합니다.
+- 고신뢰 리뷰가 필요한 경우 `review_gate.py finalize --hmac-secret-env HARNESS_REVIEW_SECRET --approval-token ...`로 prepared review nonce에 대한 optional HMAC 승인을 요구합니다.
+- `subagent_planner.py`는 `harness/model_policy.json` 기준의 planned model과 reasoning effort를 dispatch/event에 기록합니다. 실제 Codex runtime model 노출이 없는 환경에서는 이것을 계획 telemetry로만 해석합니다.
 - `scripts/harness/self_test.py`와 관련 gate를 실행하는 CI 또는 branch protection을 추가합니다.
 - 실제 프로젝트 작업에서 최종 완료 전에 `scripts/harness/session_close.py`를 실행합니다.
 
