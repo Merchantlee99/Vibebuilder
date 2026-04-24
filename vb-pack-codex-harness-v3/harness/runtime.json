@@ -1,0 +1,48 @@
+{
+  "schema_version": 2,
+  "framework_version": "v3",
+  "deployment_profile": "template",
+  "enforcement_mode": "advisory",
+  "default_adoption_profile": "strict",
+  "default_tier": "normal",
+  "state_root": "harness",
+  "control_plane_root": ".codex",
+  "skills_root": ".agents/skills",
+  "review": {
+    "normal_requires_independent_review": true,
+    "high_risk_requires_independent_review": true,
+    "normal_requires_hmac_approval": false,
+    "high_risk_requires_hmac_approval": true,
+    "prepared_event_required": true,
+    "self_review_allowed": false
+  },
+  "subagents": {
+    "max_threads": 6,
+    "max_depth": 1,
+    "worker_mode": "worktree",
+    "read_only_roles": [
+      "pm_strategist",
+      "pm_redteam",
+      "docs_researcher",
+      "code_mapper",
+      "task_distributor",
+      "reviewer",
+      "security_auditor",
+      "browser_debugger"
+    ]
+  },
+  "gates": {
+    "plan_gate": "normal",
+    "review_gate": "normal",
+    "finish_gate": "trivial",
+    "strict_gate": "normal"
+  },
+  "strict": {
+    "hooks_required": true,
+    "hmac_required_for_high_risk": true,
+    "event_segments_required": true,
+    "telemetry_backup_required_for_production": true,
+    "branch_protection_required_for_production": true,
+    "offsite_backup_is_external": true
+  }
+}

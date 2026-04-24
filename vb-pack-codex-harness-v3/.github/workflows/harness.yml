@@ -1,0 +1,37 @@
+name: Harness
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  harness:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Bootstrap harness
+        run: python3 scripts/harness/bootstrap.py
+      - name: Self test
+        run: python3 scripts/harness/self_test.py
+      - name: Unit tests
+        run: python3 -m unittest discover -s tests -q
+      - name: Template gates
+        run: |
+          python3 scripts/harness/gate.py all --tier normal --template
+          python3 scripts/harness/gate.py all --tier high-risk --template
+      - name: Harness audits
+        run: |
+          python3 scripts/harness/automation_planner.py audit
+          python3 scripts/harness/skillify_audit.py all
+          python3 scripts/harness/quality_gate.py --tier high-risk --template
+          python3 scripts/harness/risk_classifier.py --audit-manifest
+          python3 scripts/harness/event_log.py verify
+          python3 scripts/harness/strict_gate.py --template
+          python3 scripts/harness/session_index.py rebuild
+          python3 scripts/harness/ops_metrics.py --json
+          python3 scripts/harness/score.py --min-score 95

@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "purpose": "Strict/high-trust Codex Harness v3 profile.",
+  "profiles": {
+    "solo": {
+      "description": "Personal high-discipline work. Hooks on, review required, HMAC optional except high-risk.",
+      "hooks_required": true,
+      "enforcement_mode": "advisory",
+      "high_risk_hmac_required": true,
+      "branch_protection_required": false,
+      "offsite_backup_required": false
+    },
+    "strict": {
+      "description": "Default v3 adoption profile. Hooks on, enforced session close, high-risk HMAC, telemetry segment verification.",
+      "hooks_required": true,
+      "enforcement_mode": "enforced",
+      "high_risk_hmac_required": true,
+      "branch_protection_required": false,
+      "offsite_backup_required": false
+    },
+    "team": {
+      "description": "Two-person or small-team profile. Requires strict profile plus independent review and protected main branch.",
+      "hooks_required": true,
+      "enforcement_mode": "enforced",
+      "high_risk_hmac_required": true,
+      "branch_protection_required": true,
+      "offsite_backup_required": false
+    },
+    "production": {
+      "description": "Highest-trust profile for sensitive production systems. Requires strict profile plus external backup and protected review workflow.",
+      "hooks_required": true,
+      "enforcement_mode": "enforced",
+      "high_risk_hmac_required": true,
+      "branch_protection_required": true,
+      "offsite_backup_required": true
+    }
+  },
+  "required_static_assets": [
+    "AGENTS.md",
+    ".codex/config.toml",
+    ".codex/hooks.json",
+    "harness/runtime.json",
+    "harness/strict_policy.json",
+    "scripts/harness/strict_gate.py",
+    "scripts/harness/event_log.py",
+    "scripts/harness/review_gate.py",
+    "docs/ai/strict-operations.md",
+    "templates/Strict-Adoption.md"
+  ],
+  "limits": [
+    "Runtime model enforcement depends on Codex exposing model-used metadata.",
+    "HMAC only proves external approval if the secret is kept outside the Codex session.",
+    "Local hash chains do not replace off-site telemetry backup."
+  ]
+}
