@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 
 from common import ROOT, append_jsonl, load_json, utc_slug, write_json
@@ -12,6 +13,7 @@ from event_log import record_event
 
 INTENTS_PATH = ROOT / "harness" / "context" / "automation-intents.json"
 LOG_PATH = ROOT / "harness" / "telemetry" / "automation-events.jsonl"
+EVENTS_PATH = ROOT / "harness" / "telemetry" / "events.jsonl"
 
 ALLOWED_KINDS = {
     "thread-heartbeat",
@@ -65,7 +67,7 @@ def add(args: argparse.Namespace) -> int:
 
 def scan(_: argparse.Namespace) -> int:
     proposals: list[dict] = []
-    if list((ROOT / "harness" / "reviews").glob("review-*.md")):
+    if unresolved_reviews():
         proposals.append({
             "kind": "pending-review",
             "title": "Review pending review artifacts",
@@ -100,6 +102,59 @@ def scan(_: argparse.Namespace) -> int:
     for proposal in proposals:
         print(f"- {proposal['kind']}: {proposal['title']} ({proposal['cadence']})")
     return 0
+
+
+def unresolved_reviews() -> list[str]:
+    review_files = sorted((ROOT / "harness" / "reviews").glob("review-*.md"))
+    unresolved = []
+    accepted = accepted_review_files()
+    for path in review_files:
+        rel = str(path.relative_to(ROOT))
+        text = path.read_text(encoding="utf-8")
+        if rel in accepted:
+            continue
+        if "Verdict: accept" in text or "Verdict: accept-with-follow-up" in text:
+            continue
+        unresolved.append(rel)
+    prepared = prepared_review_files() - accepted
+    unresolved.extend(sorted(prepared - set(unresolved)))
+    return unresolved
+
+
+def prepared_review_files() -> set[str]:
+    return review_event_files("review.prepare")
+
+
+def accepted_review_files() -> set[str]:
+    files = set()
+    if not EVENTS_PATH.exists():
+        return files
+    for line in EVENTS_PATH.read_text(encoding="utf-8").splitlines():
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if event.get("kind") == "review.finalize" and event.get("status") == "accepted":
+            review_file = event.get("data", {}).get("review_file")
+            if review_file:
+                files.add(review_file)
+    return files
+
+
+def review_event_files(kind: str) -> set[str]:
+    files = set()
+    if not EVENTS_PATH.exists():
+        return files
+    for line in EVENTS_PATH.read_text(encoding="utf-8").splitlines():
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if event.get("kind") == kind:
+            review_file = event.get("data", {}).get("review_file")
+            if review_file:
+                files.add(review_file)
+    return files
 
 
 def audit(_: argparse.Namespace) -> int:

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from collections import Counter
 
 from common import ROOT
@@ -34,7 +35,7 @@ def detect(threshold: int) -> list[dict]:
     keys = []
     for event in blocked:
         data = event.get("data", {})
-        reason = data.get("reason") or ",".join(data.get("errors", [])[:2]) or event.get("status")
+        reason = canonical_reason(data.get("reason"), data.get("errors", []), event.get("status"))
         keys.append((event.get("kind", "unknown"), reason))
     counts = Counter(keys)
     findings = []
@@ -42,6 +43,23 @@ def detect(threshold: int) -> list[dict]:
         if count >= threshold:
             findings.append({"kind": kind, "reason": reason, "count": count})
     return findings
+
+
+def canonical_reason(reason, errors, fallback) -> str:
+    if reason:
+        return normalize_text(str(reason))
+    if isinstance(errors, list) and errors:
+        normalized = sorted(normalize_text(str(error)) for error in errors if str(error).strip())
+        return "|".join(normalized[:3]) or normalize_text(str(fallback))
+    return normalize_text(str(fallback))
+
+
+def normalize_text(value: str) -> str:
+    value = value.lower().strip()
+    value = re.sub(r"\b[0-9a-f]{8,}\b", "<hex>", value)
+    value = re.sub(r"\d{4,}", "<num>", value)
+    value = re.sub(r"\s+", " ", value)
+    return value
 
 
 def main() -> int:
@@ -72,4 +90,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

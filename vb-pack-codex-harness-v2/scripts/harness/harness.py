@@ -45,6 +45,19 @@ def main() -> int:
 
     sub.add_parser("score")
     sub.add_parser("metrics")
+    sub.add_parser("self-test")
+    sub.add_parser("quality")
+    sub.add_parser("events")
+    sub.add_parser("learning")
+
+    automation = sub.add_parser("automation")
+    automation_sub = automation.add_subparsers(dest="automation_command", required=True)
+    automation_sub.add_parser("scan")
+    automation_sub.add_parser("audit")
+
+    skill = sub.add_parser("skill")
+    skill_sub = skill.add_subparsers(dest="skill_command", required=True)
+    skill_sub.add_parser("audit")
 
     index = sub.add_parser("index")
     index_sub = index.add_subparsers(dest="index_command", required=True)
@@ -87,6 +100,20 @@ def main() -> int:
         return run(["scripts/harness/score.py"])
     if args.command == "metrics":
         return run(["scripts/harness/ops_metrics.py"])
+    if args.command == "self-test":
+        return run(["scripts/harness/self_test.py"])
+    if args.command == "quality":
+        return run(["scripts/harness/quality_gate.py", "--tier", "high-risk", "--template"])
+    if args.command == "events":
+        return run(["scripts/harness/event_log.py", "tail", "--log", "events"])
+    if args.command == "learning":
+        return run(["scripts/harness/learning_detector.py"])
+    if args.command == "automation" and args.automation_command == "scan":
+        return run(["scripts/harness/automation_planner.py", "scan"])
+    if args.command == "automation" and args.automation_command == "audit":
+        return run(["scripts/harness/automation_planner.py", "audit"])
+    if args.command == "skill" and args.skill_command == "audit":
+        return run(["scripts/harness/skillify_audit.py", "all"])
     if args.command == "index" and args.index_command == "rebuild":
         return run(["scripts/harness/session_index.py", "rebuild"])
     if args.command == "index" and args.index_command == "search":
@@ -96,4 +123,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

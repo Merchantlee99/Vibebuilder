@@ -8,11 +8,19 @@ import tempfile
 import unittest
 from pathlib import Path
 
+try:
+    import tomllib
+except ModuleNotFoundError:
+    tomllib = None
+
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def parse_config(path: Path) -> dict:
+    if tomllib is not None:
+        with path.open("rb") as fh:
+            return tomllib.load(fh)
     data: dict = {}
     current: dict = data
     in_multiline = False
@@ -58,6 +66,22 @@ def parse_config(path: Path) -> dict:
 
 
 class HarnessStructureTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        for path in [
+            ROOT / "harness/telemetry/events.jsonl",
+            ROOT / "harness/telemetry/learnings.jsonl",
+            ROOT / "harness/telemetry/events.lock",
+            ROOT / "harness/context/ownership-claims.json",
+            ROOT / "harness/context/automation-intents.json",
+            ROOT / "harness/context/session-index.sqlite3",
+            ROOT / "harness/context/session-index.sqlite3.tmp",
+        ]:
+            if path.exists():
+                path.unlink()
+        for path in (ROOT / "harness/reviews").glob("review-*.md"):
+            path.unlink()
+
     def run_cmd(self, *args: str) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
             [sys.executable, *args],
@@ -230,6 +254,18 @@ class HarnessStructureTest(unittest.TestCase):
         payload = json.loads(proc.stdout)
         self.assertEqual(payload["tier"], "high-risk")
 
+    def test_risk_classifier_avoids_auth_substring_false_positive(self) -> None:
+        proc = self.run_cmd("scripts/harness/risk_classifier.py", "authority figure updates", "--json")
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        payload = json.loads(proc.stdout)
+        self.assertNotEqual(payload["tier"], "high-risk")
+
+    def test_risk_manifest_audit(self) -> None:
+        proc = self.run_cmd("scripts/harness/risk_classifier.py", "--audit-manifest", "--json")
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        payload = json.loads(proc.stdout)
+        self.assertTrue(payload["ok"])
+
     def test_quality_gate_template_and_index_metrics(self) -> None:
         quality = self.run_cmd("scripts/harness/quality_gate.py", "--tier", "high-risk", "--template", "--json")
         self.assertEqual(quality.returncode, 0, quality.stdout + quality.stderr)
@@ -244,6 +280,85 @@ class HarnessStructureTest(unittest.TestCase):
         proc = self.run_cmd("scripts/harness/harness.py", "classify", "권한", "결제", "수정")
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
         self.assertEqual(proc.stdout.strip(), "high-risk")
+
+    def test_learning_detector_canonicalizes_error_order(self) -> None:
+        events = ROOT / "harness/telemetry/events.jsonl"
+        old = events.read_text(encoding="utf-8") if events.exists() else None
+        try:
+            if events.exists():
+                events.unlink()
+            self.run_cmd(
+                "scripts/harness/event_log.py",
+                "event",
+                "--kind",
+                "quality.gate",
+                "--status",
+                "blocked",
+                "--data-json",
+                '{"errors":["B failed","A failed"]}',
+            )
+            self.run_cmd(
+                "scripts/harness/event_log.py",
+                "event",
+                "--kind",
+                "quality.gate",
+                "--status",
+                "blocked",
+                "--data-json",
+                '{"errors":["A failed","B failed"]}',
+            )
+            detect = self.run_cmd("scripts/harness/learning_detector.py", "--threshold", "2", "--json")
+            self.assertEqual(detect.returncode, 0, detect.stdout + detect.stderr)
+            payload = json.loads(detect.stdout)
+            self.assertEqual(len(payload["findings"]), 1)
+        finally:
+            if old is None:
+                if events.exists():
+                    events.unlink()
+            else:
+                events.write_text(old, encoding="utf-8")
+
+    def test_automation_scan_ignores_accepted_review(self) -> None:
+        review_dir = ROOT / "harness/reviews"
+        events = ROOT / "harness/telemetry/events.jsonl"
+        old_events = events.read_text(encoding="utf-8") if events.exists() else None
+        review_dir.mkdir(parents=True, exist_ok=True)
+        review = review_dir / "review-test-accepted.md"
+        try:
+            if events.exists():
+                events.unlink()
+            review.write_text("Verdict: accept\n", encoding="utf-8")
+            scan = self.run_cmd("scripts/harness/automation_planner.py", "scan")
+            self.assertEqual(scan.returncode, 0, scan.stdout + scan.stderr)
+            self.assertNotIn("pending-review", scan.stdout)
+        finally:
+            if review.exists():
+                review.unlink()
+            if old_events is None:
+                if events.exists():
+                    events.unlink()
+            else:
+                events.write_text(old_events, encoding="utf-8")
+
+    def test_event_log_hash_chain_detects_tamper(self) -> None:
+        events = ROOT / "harness/telemetry/events.jsonl"
+        old = events.read_text(encoding="utf-8") if events.exists() else None
+        try:
+            if events.exists():
+                events.unlink()
+            self.run_cmd("scripts/harness/event_log.py", "event", "--kind", "test.event")
+            verify = self.run_cmd("scripts/harness/event_log.py", "verify")
+            self.assertEqual(verify.returncode, 0, verify.stdout + verify.stderr)
+            text = events.read_text(encoding="utf-8").replace("test.event", "test.tampered")
+            events.write_text(text, encoding="utf-8")
+            verify = self.run_cmd("scripts/harness/event_log.py", "verify")
+            self.assertNotEqual(verify.returncode, 0)
+        finally:
+            if old is None:
+                if events.exists():
+                    events.unlink()
+            else:
+                events.write_text(old, encoding="utf-8")
 
 
 if __name__ == "__main__":

@@ -101,6 +101,8 @@ def score() -> dict:
         "automation_audit": command_ok([sys.executable, "scripts/harness/automation_planner.py", "audit"]),
         "quality_gate": command_ok([sys.executable, "scripts/harness/quality_gate.py", "--tier", "high-risk", "--template"]),
         "risk_classifier": command_ok([sys.executable, "scripts/harness/risk_classifier.py", "권한 결제 수정"]),
+        "risk_manifest": command_ok([sys.executable, "scripts/harness/risk_classifier.py", "--audit-manifest"]),
+        "event_log_verify": command_ok([sys.executable, "scripts/harness/event_log.py", "verify"]),
     }
     failed_checks = [name for name, ok in checks.items() if not ok]
     if failed_checks:

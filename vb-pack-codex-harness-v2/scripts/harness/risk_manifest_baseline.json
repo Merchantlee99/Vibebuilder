@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "required_high_risk_terms": [
+    "auth",
+    "authorization",
+    "permission",
+    "payment",
+    "security",
+    "secret",
+    "migration",
+    "schema",
+    "privacy",
+    "finance",
+    "trading",
+    "pricing",
+    "권한",
+    "인증",
+    "인가",
+    "결제",
+    "보안",
+    "마이그레이션",
+    "스키마",
+    "개인정보",
+    "금융",
+    "거래",
+    "가격"
+  ]
+}
+

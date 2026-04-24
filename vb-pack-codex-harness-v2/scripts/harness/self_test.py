@@ -9,6 +9,11 @@ import subprocess
 import sys
 from pathlib import Path
 
+try:
+    import tomllib
+except ModuleNotFoundError:
+    tomllib = None
+
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -37,6 +42,7 @@ REQUIRED_FILES = [
     "scripts/harness/session_close.py",
     "scripts/harness/event_log.py",
     "scripts/harness/risk_classifier.py",
+    "scripts/harness/risk_manifest_baseline.json",
     "scripts/harness/quality_gate.py",
     "scripts/harness/session_index.py",
     "scripts/harness/ops_metrics.py",
@@ -59,6 +65,9 @@ def read_toml(path: Path) -> dict:
     This avoids requiring Python 3.11's tomllib so the harness works with the
     default macOS Python 3.9 runtime.
     """
+    if tomllib is not None:
+        with path.open("rb") as fh:
+            return tomllib.load(fh)
     data: dict = {}
     current: dict = data
     in_multiline = False
@@ -190,6 +199,8 @@ def main() -> int:
         [sys.executable, "scripts/harness/adopt_project.py", "--check"],
         [sys.executable, "scripts/harness/session_close.py", "--tier", "high-risk", "--template", "--json"],
         [sys.executable, "scripts/harness/risk_classifier.py", "권한 결제 수정", "--json"],
+        [sys.executable, "scripts/harness/risk_classifier.py", "--audit-manifest", "--json"],
+        [sys.executable, "scripts/harness/event_log.py", "verify"],
         [sys.executable, "scripts/harness/quality_gate.py", "--tier", "high-risk", "--template", "--json"],
         [sys.executable, "scripts/harness/session_index.py", "rebuild"],
         [sys.executable, "scripts/harness/ops_metrics.py", "--json"],

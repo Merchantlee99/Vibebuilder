@@ -40,6 +40,8 @@ python3 scripts/harness/session_index.py rebuild
 python3 scripts/harness/ops_metrics.py
 ```
 
+`score.py` is a readiness score, not proof of real-world output quality. Use `ops_metrics.py`, review findings, validation evidence, and CI history for operational quality.
+
 ## Project Adoption
 
 For a copied real project:
@@ -70,6 +72,7 @@ Use:
 
 ```bash
 python3 scripts/harness/event_log.py tail --log events
+python3 scripts/harness/event_log.py verify
 python3 scripts/harness/session_index.py search "review"
 python3 scripts/harness/ops_metrics.py
 ```

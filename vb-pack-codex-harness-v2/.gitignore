@@ -7,8 +7,10 @@ __pycache__/
 
 # Harness runtime artifacts are intentionally mutable in real projects.
 harness/telemetry/*.jsonl
+harness/telemetry/*.lock
 harness/context/automation-intents.json
 harness/context/current-task.json
+harness/context/session-index.sqlite3
+harness/context/session-index.sqlite3.tmp
 harness/reviews/review-*.md
 harness/audits/audit-*.md
-

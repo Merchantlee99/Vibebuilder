@@ -4,11 +4,12 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 from pathlib import Path
 
-from common import ROOT, parse_key_value_lines, nonempty_section, utc_slug
+from common import ROOT, parse_key_value_lines, nonempty_section, utc_slug, event_id
 from event_log import record_event
 
 
@@ -38,6 +39,16 @@ def prepared_review_event(review_file: str) -> dict | None:
     return None
 
 
+def file_fingerprint(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def section_len(text: str, heading: str) -> int:
+    import re
+    match = re.search(rf"^## {re.escape(heading)}\s*$([\s\S]*?)(?=^## |\Z)", text, re.MULTILINE)
+    return len(match.group(1).strip()) if match else 0
+
+
 def prepare(args: argparse.Namespace) -> int:
     REVIEW_DIR.mkdir(parents=True, exist_ok=True)
     slug = utc_slug()
@@ -54,13 +65,16 @@ def prepare(args: argparse.Namespace) -> int:
     for old, new in replacements.items():
         body = body.replace(old, new, 1)
     body += "\n## Prepared Context\n\n"
+    nonce = event_id("review-nonce")
     body += f"- Artifact directory: `{args.artifact_dir}`\n"
+    body += f"- Review-Nonce: `{nonce}`\n"
     if args.changed_file:
         body += "- Changed files:\n"
         for changed in args.changed_file:
             body += f"  - `{changed}`\n"
     body += "- Reviewer must replace `Verdict: pending` before finalize.\n"
     target.write_text(body, encoding="utf-8")
+    fingerprint = file_fingerprint(target)
     record_event(
         "review.prepare",
         actor=args.producer,
@@ -72,6 +86,8 @@ def prepare(args: argparse.Namespace) -> int:
         producer_session=args.producer_session,
         tier=args.tier,
         changed_files=args.changed_file,
+        nonce=nonce,
+        fingerprint=fingerprint,
     )
     print(target.relative_to(ROOT))
     return 0
@@ -102,6 +118,8 @@ def finalize(args: argparse.Namespace) -> int:
     for heading in ["Scope Reviewed", "Validation Reviewed", "Residual Risk"]:
         if not nonempty_section(text, heading):
             errors.append(f"missing non-empty section: {heading}")
+        elif section_len(text, heading) < args.min_section_chars:
+            errors.append(f"section too short for evidence: {heading}")
     if "pending" in fields.get("Verdict", "").lower():
         errors.append("pending verdict cannot finalize")
     for changed in args.changed_file:
@@ -117,6 +135,12 @@ def finalize(args: argparse.Namespace) -> int:
             errors.append("review producer session does not match prepared review event")
         if data.get("reviewer") and data.get("reviewer") != fields.get("Reviewer"):
             errors.append("reviewer does not match prepared review event")
+        if data.get("nonce") and data.get("nonce") not in text:
+            errors.append("review nonce missing from review artifact")
+        if data.get("fingerprint") and not args.allow_modified_fingerprint:
+            current_fingerprint = file_fingerprint(review)
+            if current_fingerprint == data.get("fingerprint"):
+                errors.append("review artifact was not modified after prepare")
     elif args.require_prepared_event:
         errors.append("missing matching review.prepare event")
 
@@ -143,6 +167,7 @@ def finalize(args: argparse.Namespace) -> int:
         tier=fields["Tier"],
         verdict=fields["Verdict"],
         changed_files=args.changed_file,
+        prepared_event=prepared.get("id") if prepared else "",
     )
     print(f"review finalized: {review.relative_to(ROOT)}")
     return 0
@@ -165,6 +190,8 @@ def main() -> int:
     fin.add_argument("--review-file")
     fin.add_argument("--changed-file", action="append", default=[])
     fin.add_argument("--require-prepared-event", action="store_true")
+    fin.add_argument("--allow-modified-fingerprint", action="store_true")
+    fin.add_argument("--min-section-chars", type=int, default=20)
 
     args = parser.parse_args()
     if args.command == "prepare":
