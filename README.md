@@ -13,7 +13,9 @@
 | Pack | 대상 | 핵심 초점 |
 |------|------|-----------|
 | `vb-pack-claude-harness` | Claude Code 단독 운용 | hook 중심 통제, actor crossover, 강한 기계 차단 |
-| `vb-pack-codex-harness` | Codex app 단독 운용 | subagents, automations, modes, browser/computer use를 1급 primitive로 사용 |
+| `vb-pack-codex-harness` | Codex app 단독 운용 초기 버전 | subagents, automations, modes, browser/computer use를 1급 primitive로 사용 |
+| `vb-pack-codex-harness-v2` | Codex app 평소 개발용 | 자연어 daily driver, subagent ownership, review gate, telemetry, quality gate |
+| `vb-pack-codex-harness-v3` | Codex app 고신뢰 strict 운용 | hooks-on profile, strict gate, high-risk HMAC review, team/production 운영 기준 |
 
 ## 어떤 레퍼런스를 참고했는가
 
@@ -32,9 +34,14 @@
 ## 어떤 팩을 고르면 되는가
 
 - Claude Code에서 강한 훅 차단과 자기승인 방지가 우선이면 `vb-pack-claude-harness`가 맞다.
-- Codex app의 `subagents`, `automations`, `local/worktree/cloud`, `browser`, `computer use`를 실전 primitive로 쓰고 싶으면 `vb-pack-codex-harness`가 맞다.
+- Codex app의 `subagents`, `automations`, `local/worktree/cloud`, `browser`, `computer use`를 실전 primitive로 쓰는 기본 구조를 보고 싶으면 `vb-pack-codex-harness`가 맞다.
+- 개인 바이브코딩, 일반 앱 개발, 장기 프로젝트의 평소 운영에는 `vb-pack-codex-harness-v2`가 맞다.
+- 결제, 인증/권한, 보안, 금융/트레이딩, DB migration, production 배포, 2인 협업처럼 실패 비용이 큰 작업에는 `vb-pack-codex-harness-v3`가 맞다.
+- 실사용 기준으로는 v2를 기본값으로 두고, 고위험 프로젝트에서만 v3를 선택하는 흐름을 권장한다.
 
 ## 시작점
 
 - Claude pack 소개: [vb-pack-claude-harness/README.md](./vb-pack-claude-harness/README.md)
 - Codex pack 소개: [vb-pack-codex-harness/README.md](./vb-pack-codex-harness/README.md)
+- Codex v2 pack 소개: [vb-pack-codex-harness-v2/README.md](./vb-pack-codex-harness-v2/README.md)
+- Codex v3 strict pack 소개: [vb-pack-codex-harness-v3/README.md](./vb-pack-codex-harness-v3/README.md)
