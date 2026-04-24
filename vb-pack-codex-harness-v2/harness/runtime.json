@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "deployment_profile": "template",
+  "enforcement_mode": "advisory",
+  "default_tier": "normal",
+  "state_root": "harness",
+  "control_plane_root": ".codex",
+  "skills_root": ".agents/skills",
+  "review": {
+    "normal_requires_independent_review": true,
+    "high_risk_requires_independent_review": true,
+    "self_review_allowed": false
+  },
+  "subagents": {
+    "max_threads": 6,
+    "max_depth": 1,
+    "worker_mode": "worktree",
+    "read_only_roles": [
+      "pm_strategist",
+      "pm_redteam",
+      "docs_researcher",
+      "code_mapper",
+      "task_distributor",
+      "reviewer",
+      "security_auditor",
+      "browser_debugger"
+    ]
+  },
+  "gates": {
+    "plan_gate": "normal",
+    "review_gate": "normal",
+    "finish_gate": "trivial"
+  }
+}
