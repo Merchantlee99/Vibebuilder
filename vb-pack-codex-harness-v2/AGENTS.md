@@ -53,6 +53,7 @@ This repository is a Codex-only harness template for natural-language product an
 - Use `scripts/harness/review_gate.py prepare` and `finalize` for review artifacts when the task is `normal+`.
 - Use `scripts/harness/subagent_planner.py plan --claim` before assigning write-scoped worker subagents.
 - Use `scripts/harness/session_close.py` before final completion when project artifacts exist.
+- Use `scripts/harness/quality_gate.py` for `normal+` work and treat high-risk quality failures as blockers.
 - Record residual risks and follow-ups when validation is incomplete.
 - If a gate fails, fix the issue or report the blocker plainly.
 
@@ -74,3 +75,4 @@ This repository is a Codex-only harness template for natural-language product an
 - Use `scripts/harness/automation_planner.py audit` before relying on automation intents.
 - Use `scripts/harness/skillify_audit.py all` before promoting proposed skills into `.agents/skills`.
 - Use `scripts/harness/score.py --min-score 95` to check whether this harness still meets the target operating standard.
+- Use `scripts/harness/event_log.py tail` and `scripts/harness/session_index.py search` when reconstructing prior work.

@@ -82,11 +82,14 @@ python3 scripts/harness/gate.py all --tier normal --template
 운영 보조 명령:
 
 ```bash
+python3 scripts/harness/harness.py check --tier normal --template
 python3 scripts/harness/review_gate.py prepare --tier normal --producer main-codex
 python3 scripts/harness/review_gate.py finalize --review-file harness/reviews/review-YYYYMMDDTHHMMSSZ.md
 python3 scripts/harness/subagent_planner.py plan --role worker --owner worker-auth --goal "auth slice" --write-scope src/auth --claim
 python3 scripts/harness/automation_planner.py scan
 python3 scripts/harness/skillify_audit.py all
+python3 scripts/harness/quality_gate.py --tier high-risk --template
+python3 scripts/harness/session_index.py rebuild
 python3 scripts/harness/score.py --min-score 95
 ```
 
@@ -100,6 +103,8 @@ python3 scripts/harness/score.py --min-score 95
 - `review_gate.py finalize`로 self-review와 pending verdict를 차단합니다.
 - `subagent_planner.py --claim`으로 write-scope 충돌을 방지합니다.
 - automation intent와 proposed skill을 승격 전에 audit합니다.
+- `events.jsonl`, `learnings.jsonl`, `session_index.py`로 장기 작업 이력을 재구성합니다.
+- `quality_gate.py`로 artifact의 형식뿐 아니라 validation/rollback/review 증거 품질을 점검합니다.
 - `scripts/harness/self_test.py`와 관련 gate를 실행하는 CI 또는 branch protection을 추가합니다.
 - 실제 프로젝트 작업에서 최종 완료 전에 `scripts/harness/session_close.py`를 실행합니다.
 

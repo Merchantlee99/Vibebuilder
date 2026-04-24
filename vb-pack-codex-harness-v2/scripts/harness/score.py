@@ -28,10 +28,13 @@ CRITERIA = [
     ("gates_and_review_enforcement", 16, [
         "scripts/harness/gate.py",
         "scripts/harness/review_gate.py",
+        "scripts/harness/quality_gate.py",
         "templates/Review.md",
     ]),
     ("long_term_state_and_memory", 10, [
         "harness/runtime.json",
+        "scripts/harness/event_log.py",
+        "scripts/harness/session_index.py",
         "docs/ai/SESSION_LOG.md",
         "docs/ai/decisions.md",
         "docs/ai/known-gaps.md",
@@ -57,6 +60,7 @@ CRITERIA = [
     ]),
     ("session_close_and_operational_docs", 8, [
         "scripts/harness/session_close.py",
+        "scripts/harness/harness.py",
         "docs/ai/operations.md",
     ]),
     ("safety_and_optional_hooks", 6, [
@@ -95,6 +99,8 @@ def score() -> dict:
         "self_test": command_ok([sys.executable, "scripts/harness/self_test.py"]),
         "skillify_audit": command_ok([sys.executable, "scripts/harness/skillify_audit.py", "all"]),
         "automation_audit": command_ok([sys.executable, "scripts/harness/automation_planner.py", "audit"]),
+        "quality_gate": command_ok([sys.executable, "scripts/harness/quality_gate.py", "--tier", "high-risk", "--template"]),
+        "risk_classifier": command_ok([sys.executable, "scripts/harness/risk_classifier.py", "권한 결제 수정"]),
     }
     failed_checks = [name for name, ok in checks.items() if not ok]
     if failed_checks:
@@ -140,4 +146,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

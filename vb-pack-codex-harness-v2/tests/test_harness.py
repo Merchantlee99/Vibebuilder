@@ -224,6 +224,27 @@ class HarnessStructureTest(unittest.TestCase):
         )
         self.assertNotEqual(proc.returncode, 0)
 
+    def test_korean_risk_classifier(self) -> None:
+        proc = self.run_cmd("scripts/harness/risk_classifier.py", "권한 결제 로직 수정", "--json")
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        payload = json.loads(proc.stdout)
+        self.assertEqual(payload["tier"], "high-risk")
+
+    def test_quality_gate_template_and_index_metrics(self) -> None:
+        quality = self.run_cmd("scripts/harness/quality_gate.py", "--tier", "high-risk", "--template", "--json")
+        self.assertEqual(quality.returncode, 0, quality.stdout + quality.stderr)
+        index = self.run_cmd("scripts/harness/session_index.py", "rebuild")
+        self.assertEqual(index.returncode, 0, index.stdout + index.stderr)
+        metrics = self.run_cmd("scripts/harness/ops_metrics.py", "--json")
+        self.assertEqual(metrics.returncode, 0, metrics.stdout + metrics.stderr)
+        payload = json.loads(metrics.stdout)
+        self.assertIn("events_total", payload)
+
+    def test_harness_entrypoint(self) -> None:
+        proc = self.run_cmd("scripts/harness/harness.py", "classify", "권한", "결제", "수정")
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        self.assertEqual(proc.stdout.strip(), "high-risk")
+
 
 if __name__ == "__main__":
     unittest.main()

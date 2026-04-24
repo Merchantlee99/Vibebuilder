@@ -7,6 +7,7 @@ import argparse
 import sys
 
 from common import ROOT, append_jsonl, load_json, path_list_overlap, utc_slug, write_json
+from event_log import record_event
 
 
 CLAIMS_PATH = ROOT / "harness" / "context" / "ownership-claims.json"
@@ -47,12 +48,15 @@ def default_mode(role: str, write_scope: list[str]) -> str:
 def plan(args: argparse.Namespace) -> int:
     mode = args.mode or default_mode(args.role, args.write_scope)
     if mode == "read-only" and args.write_scope:
+        record_event("subagent.plan", actor=args.owner, status="blocked", role=args.role, reason="read-only write_scope")
         print("ERROR: read-only subagents cannot claim write_scope", file=sys.stderr)
         return 1
     if args.tier == "high-risk" and args.write_scope and mode == "local":
+        record_event("subagent.plan", actor=args.owner, status="blocked", role=args.role, reason="high-risk local mode")
         print("ERROR: high-risk write-scoped subagents must use worktree or cloud mode", file=sys.stderr)
         return 1
     if args.tier == "high-risk" and args.write_scope and not args.claim:
+        record_event("subagent.plan", actor=args.owner, status="blocked", role=args.role, reason="high-risk missing claim")
         print("ERROR: high-risk write-scoped subagents must use --claim", file=sys.stderr)
         return 1
 
@@ -64,6 +68,7 @@ def plan(args: argparse.Namespace) -> int:
             conflicts.append(claim)
 
     if conflicts:
+        record_event("subagent.plan", actor=args.owner, status="blocked", role=args.role, conflicts=conflicts)
         for conflict in conflicts:
             print(
                 f"ERROR: write scope conflicts with active owner {conflict.get('owner')}: {conflict.get('write_scope')}",
@@ -101,7 +106,9 @@ def plan(args: argparse.Namespace) -> int:
         claims.append(claim)
         save_claims(claims)
         append_jsonl(LOG_PATH, {"event": "claim", **claim})
+        record_event("subagent.claim", actor=args.owner, status="active", claim=claim)
 
+    record_event("subagent.plan", actor=args.owner, status="ok", **dispatch)
     print(render_dispatch(dispatch))
     return 0
 
@@ -131,6 +138,7 @@ def release(args: argparse.Namespace) -> int:
             claim["released_at"] = utc_slug()
             changed = True
             append_jsonl(LOG_PATH, {"event": "release", **claim})
+            record_event("subagent.release", actor=args.owner, status="released", claim=claim)
     if not changed:
         print(f"WARN: no active claims for owner {args.owner}")
     save_claims(claims)

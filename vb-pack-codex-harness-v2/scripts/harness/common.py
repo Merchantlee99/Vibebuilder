@@ -6,6 +6,7 @@ import json
 import re
 from datetime import datetime, timezone
 from pathlib import Path
+from uuid import uuid4
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -15,6 +16,10 @@ TIER_ORDER = {"trivial": 0, "normal": 1, "high-risk": 2}
 
 def utc_slug() -> str:
     return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+
+
+def event_id(prefix: str = "event") -> str:
+    return f"{prefix}-{utc_slug()}-{uuid4().hex[:8]}"
 
 
 def load_json(path: Path, default):
@@ -88,4 +93,3 @@ def path_list_overlap(left: list[str], right: list[str]) -> bool:
             if a_norm == b_norm or a_norm.startswith(b_norm + "/") or b_norm.startswith(a_norm + "/"):
                 return True
     return False
-

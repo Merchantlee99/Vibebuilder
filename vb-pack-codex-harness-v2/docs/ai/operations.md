@@ -29,12 +29,15 @@ These commands exist so Codex and maintainers can verify the harness:
 
 ```bash
 python3 scripts/harness/self_test.py
+python3 scripts/harness/harness.py check --tier normal --template
 python3 scripts/harness/score.py
 python3 scripts/harness/gate.py all --tier normal --template
 python3 scripts/harness/review_gate.py prepare --tier normal --producer main-codex
 python3 scripts/harness/subagent_planner.py check
 python3 scripts/harness/automation_planner.py audit
 python3 scripts/harness/skillify_audit.py all
+python3 scripts/harness/session_index.py rebuild
+python3 scripts/harness/ops_metrics.py
 ```
 
 ## Project Adoption
@@ -59,3 +62,14 @@ For `normal+` work, Codex should not claim completion until:
 - automation follow-up is proposed when work spans time
 - residual risks are stated
 
+## Observability
+
+The harness writes append-only events under `harness/telemetry/events.jsonl` and learnings under `harness/telemetry/learnings.jsonl`.
+
+Use:
+
+```bash
+python3 scripts/harness/event_log.py tail --log events
+python3 scripts/harness/session_index.py search "review"
+python3 scripts/harness/ops_metrics.py
+```

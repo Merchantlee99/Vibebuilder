@@ -20,8 +20,10 @@ REQUIRED_FILES = [
     ".codex/hooks.json",
     "harness/runtime.json",
     "harness/model_policy.json",
+    "harness/risk_manifest.json",
     "templates/Plan.md",
     "templates/Review.md",
+    "templates/Quality-Rubric.md",
     ".github/workflows/harness.yml",
     "docs/ai/operations.md",
     "scripts/harness/gate.py",
@@ -33,6 +35,13 @@ REQUIRED_FILES = [
     "scripts/harness/adopt_project.py",
     "scripts/harness/score.py",
     "scripts/harness/session_close.py",
+    "scripts/harness/event_log.py",
+    "scripts/harness/risk_classifier.py",
+    "scripts/harness/quality_gate.py",
+    "scripts/harness/session_index.py",
+    "scripts/harness/ops_metrics.py",
+    "scripts/harness/learning_detector.py",
+    "scripts/harness/harness.py",
 ]
 
 FORBIDDEN_MUTABLE_CODEX = [
@@ -180,6 +189,12 @@ def main() -> int:
         [sys.executable, "scripts/harness/skillify_audit.py", "all", "--json"],
         [sys.executable, "scripts/harness/adopt_project.py", "--check"],
         [sys.executable, "scripts/harness/session_close.py", "--tier", "high-risk", "--template", "--json"],
+        [sys.executable, "scripts/harness/risk_classifier.py", "권한 결제 수정", "--json"],
+        [sys.executable, "scripts/harness/quality_gate.py", "--tier", "high-risk", "--template", "--json"],
+        [sys.executable, "scripts/harness/session_index.py", "rebuild"],
+        [sys.executable, "scripts/harness/ops_metrics.py", "--json"],
+        [sys.executable, "scripts/harness/learning_detector.py", "--json"],
+        [sys.executable, "scripts/harness/harness.py", "classify", "권한 결제 수정"],
     ]:
         proc = subprocess.run(command, cwd=ROOT, text=True, capture_output=True, check=False)
         if proc.returncode != 0:

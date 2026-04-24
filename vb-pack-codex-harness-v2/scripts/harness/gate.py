@@ -9,6 +9,8 @@ import re
 import sys
 from pathlib import Path
 
+from risk_classifier import classify_text
+
 
 ROOT = Path(__file__).resolve().parents[2]
 RUNTIME = ROOT / "harness" / "runtime.json"
@@ -36,10 +38,13 @@ REQUIRED_CONTROL_FILES = [
     ".agents/skills/close-session/SKILL.md",
     ".agents/skills/skillify-proposal/SKILL.md",
     "harness/runtime.json",
+    "harness/risk_manifest.json",
     "scripts/harness/review_gate.py",
     "scripts/harness/subagent_planner.py",
     "scripts/harness/automation_planner.py",
     "scripts/harness/skillify_audit.py",
+    "scripts/harness/risk_classifier.py",
+    "scripts/harness/quality_gate.py",
 ]
 
 MUTABLE_CODEX_PATHS = [
@@ -256,26 +261,11 @@ def finish_gate(args: argparse.Namespace) -> GateResult:
 
 def classify(args: argparse.Namespace) -> GateResult:
     result = GateResult()
-    text = " ".join(args.text).lower()
-    high_risk_terms = [
-        "auth",
-        "payment",
-        "security",
-        "migration",
-        "infra",
-        "secret",
-        "delete",
-        "destructive",
-        "compliance",
-        "permission",
-    ]
-    normal_terms = ["feature", "refactor", "bug", "plan", "prd", "review", "api", "database"]
-    if any(term in text for term in high_risk_terms):
-        print("high-risk")
-    elif any(term in text for term in normal_terms):
-        print("normal")
+    risk = classify_text(" ".join(args.text))
+    if args.json:
+        print(json.dumps(risk, indent=2, ensure_ascii=False))
     else:
-        print("trivial")
+        print(risk["tier"])
     return result
 
 

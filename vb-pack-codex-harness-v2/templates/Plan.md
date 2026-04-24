@@ -36,7 +36,11 @@ List files or directories owned by this task.
 
 ## Rollback
 
-Describe how to reverse or mitigate the change.
+Rollback/recover plan:
+
+- Revert the changed files or disable the affected feature flag.
+- Recover by restoring the previous known-good behavior.
+- Document any data or migration rollback limitations before release.
 
 ## Open Risks
 

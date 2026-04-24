@@ -7,6 +7,7 @@ import argparse
 import sys
 
 from common import ROOT, append_jsonl, load_json, utc_slug, write_json
+from event_log import record_event
 
 
 INTENTS_PATH = ROOT / "harness" / "context" / "automation-intents.json"
@@ -33,9 +34,11 @@ def save_intents(intents: list[dict]) -> None:
 
 def add(args: argparse.Namespace) -> int:
     if args.kind not in ALLOWED_KINDS:
+        record_event("automation.add", actor="harness", status="blocked", kind=args.kind, reason="unsupported kind")
         print(f"ERROR: unsupported automation kind: {args.kind}", file=sys.stderr)
         return 1
     if args.risk == "high" and not args.requires_approval:
+        record_event("automation.add", actor="harness", status="blocked", kind=args.kind, reason="high-risk missing approval")
         print("ERROR: high-risk automations require explicit approval flag", file=sys.stderr)
         return 1
 
@@ -55,6 +58,7 @@ def add(args: argparse.Namespace) -> int:
     intents.append(intent)
     save_intents(intents)
     append_jsonl(LOG_PATH, {"event": "add", **intent})
+    record_event("automation.add", actor="harness", status="proposed", **intent)
     print(intent["id"])
     return 0
 
@@ -113,9 +117,11 @@ def audit(_: argparse.Namespace) -> int:
         if intent.get("mode") == "local" and intent.get("risk") in {"medium", "high"}:
             errors.append(f"{prefix}: medium/high risk automation should not default to local mode")
     if errors:
+        record_event("automation.audit", actor="harness", status="blocked", errors=errors)
         for error in errors:
             print(f"ERROR: {error}", file=sys.stderr)
         return 1
+    record_event("automation.audit", actor="harness", status="ok", count=len(intents))
     print("automation intents ok")
     return 0
 

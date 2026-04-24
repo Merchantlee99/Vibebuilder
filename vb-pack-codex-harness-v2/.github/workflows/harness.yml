@@ -28,5 +28,7 @@ jobs:
         run: |
           python3 scripts/harness/automation_planner.py audit
           python3 scripts/harness/skillify_audit.py all
+          python3 scripts/harness/quality_gate.py --tier high-risk --template
+          python3 scripts/harness/session_index.py rebuild
+          python3 scripts/harness/ops_metrics.py --json
           python3 scripts/harness/score.py --min-score 95
-

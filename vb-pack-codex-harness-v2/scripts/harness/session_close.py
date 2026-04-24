@@ -9,6 +9,7 @@ import subprocess
 import sys
 
 from common import ROOT
+from event_log import record_event
 
 
 def run(command: list[str]) -> tuple[bool, str]:
@@ -28,14 +29,17 @@ def main() -> int:
 
     commands = [
         ["scripts/harness/gate.py", "finish-gate", "--tier", args.tier, "--artifact-dir", args.artifact_dir],
+        ["scripts/harness/quality_gate.py", "--tier", args.tier, "--artifact-dir", args.artifact_dir],
         ["scripts/harness/subagent_planner.py", "check", "--quiet"],
         ["scripts/harness/automation_planner.py", "audit"],
         ["scripts/harness/skillify_audit.py", "all"],
     ]
     if args.template:
         commands[0].append("--template")
+        commands[1].append("--template")
     if args.review_file:
         commands[0].extend(["--review-file", args.review_file])
+        commands[1].extend(["--review-file", args.review_file])
 
     results = []
     ok = True
@@ -43,6 +47,8 @@ def main() -> int:
         success, output = run([sys.executable, *command])
         ok = ok and success
         results.append({"command": " ".join(command), "ok": success, "output": output})
+
+    record_event("session.close", actor="harness", status="ok" if ok else "blocked", tier=args.tier, results=results)
 
     if args.json:
         print(json.dumps({"ok": ok, "results": results}, indent=2))
@@ -59,4 +65,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
