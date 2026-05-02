@@ -1,0 +1,13 @@
+# Known Gaps
+
+- This template is not initialized as a Git repository.
+- Hooks are disabled by default in `.codex/config.toml`.
+- Automations are described by policy but not scheduled from this template.
+- CI is not configured because this directory is currently a local template, not a repository.
+- `score.py` measures harness readiness, not empirical product quality.
+- Review identity can be strengthened with prepared-event nonce/fingerprint checks and optional HMAC approval, but true human identity still requires the secret to be held outside the Codex session.
+- Event log hash chains and segment manifests detect line tampering and many accidental truncations. They do not replace off-site backup, signed commits, or OS-level append-only file protection.
+- `subagent_planner.py` records planned model policy, not the actual model selected by every Codex surface. Runtime model verification depends on Codex exposing that metadata.
+- v4 simplicity and design gates check artifacts and evidence, not full semantic code simplicity or actual visual taste.
+- UI/UX quality still benefits from browser QA, screenshot review, accessibility tooling, and human design judgment.
+- The upstream UI/UX Pro Max searchable database is not bundled; this template uses a lighter Codex-native workflow.

@@ -16,6 +16,7 @@
 | `vb-pack-codex-harness` | Codex app 단독 운용 초기 버전 | subagents, automations, modes, browser/computer use를 1급 primitive로 사용 |
 | `vb-pack-codex-harness-v2` | Codex app 평소 개발용 | 자연어 daily driver, subagent ownership, review gate, telemetry, quality gate |
 | `vb-pack-codex-harness-v3` | Codex app 고신뢰 strict 운용 | hooks-on profile, strict gate, high-risk HMAC review, team/production 운영 기준 |
+| `vb-pack-codex-harness-v4` | Codex app creative-daily 운용 | v2 기반에 Karpathy식 단순성 규율과 UI/UX design gate를 추가 |
 
 ## 어떤 레퍼런스를 참고했는가
 
@@ -23,6 +24,8 @@
 - [agents.md](https://github.com/agentsmd/agents.md): agent contract와 역할 경계
 - [pm-skills](https://github.com/phuryn/pm-skills): 기획, 요구사항, validation discipline
 - [hermes-agent](https://github.com/NousResearch/hermes-agent): learning↔action feedback, skill auto-gen, 장기 적응 루프
+- [andrej-karpathy-skills](https://github.com/forrestchang/andrej-karpathy-skills): hidden assumption, overengineering, broad edit를 줄이는 엔지니어링 규율
+- [ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill): UI/UX skill activation, design-system-first workflow, accessibility/responsive/anti-pattern review
 
 ## 어떤 기대효과를 노리는가
 
@@ -37,7 +40,8 @@
 - Codex app의 `subagents`, `automations`, `local/worktree/cloud`, `browser`, `computer use`를 실전 primitive로 쓰는 기본 구조를 보고 싶으면 `vb-pack-codex-harness`가 맞다.
 - 개인 바이브코딩, 일반 앱 개발, 장기 프로젝트의 평소 운영에는 `vb-pack-codex-harness-v2`가 맞다.
 - 결제, 인증/권한, 보안, 금융/트레이딩, DB migration, production 배포, 2인 협업처럼 실패 비용이 큰 작업에는 `vb-pack-codex-harness-v3`가 맞다.
-- 실사용 기준으로는 v2를 기본값으로 두고, 고위험 프로젝트에서만 v3를 선택하는 흐름을 권장한다.
+- 제품 UI, 프론트엔드, 랜딩페이지, SaaS/dashboard, 디자인 시스템, 과잉구현 방지가 중요한 daily 작업에는 `vb-pack-codex-harness-v4`가 맞다.
+- 실사용 기준으로는 v2를 기본값으로 두고, 고위험 프로젝트에서는 v3, UI/제품 빌드 품질이 중요한 작업에서는 v4를 선택하는 흐름을 권장한다.
 
 ## 시작점
 
@@ -45,3 +49,4 @@
 - Codex pack 소개: [vb-pack-codex-harness/README.md](./vb-pack-codex-harness/README.md)
 - Codex v2 pack 소개: [vb-pack-codex-harness-v2/README.md](./vb-pack-codex-harness-v2/README.md)
 - Codex v3 strict pack 소개: [vb-pack-codex-harness-v3/README.md](./vb-pack-codex-harness-v3/README.md)
+- Codex v4 creative-daily pack 소개: [vb-pack-codex-harness-v4/README.md](./vb-pack-codex-harness-v4/README.md)
