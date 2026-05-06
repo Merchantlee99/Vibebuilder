@@ -1,0 +1,65 @@
+{
+  "schema_version": 3,
+  "framework_version": "v5",
+  "deployment_profile": "template",
+  "enforcement_mode": "advisory",
+  "default_adoption_profile": "implementation-first-evidence",
+  "default_tier": "normal",
+  "state_root": "harness",
+  "control_plane_root": ".codex",
+  "skills_root": ".agents/skills",
+  "review": {
+    "normal_requires_independent_review": true,
+    "high_risk_requires_independent_review": true,
+    "self_review_allowed": false,
+    "high_risk_requires_hmac_approval": true,
+    "prepared_event_required": true
+  },
+  "subagents": {
+    "max_threads": 6,
+    "max_depth": 1,
+    "worker_mode": "worktree",
+    "read_only_roles": [
+      "pm_strategist",
+      "pm_redteam",
+      "docs_researcher",
+      "code_mapper",
+      "task_distributor",
+      "reviewer",
+      "security_auditor",
+      "browser_qa",
+      "visual_reviewer",
+      "learning_curator"
+    ]
+  },
+  "gates": {
+    "plan_gate": "normal",
+    "review_gate": "normal",
+    "finish_gate": "trivial",
+    "strict_gate": "high-risk",
+    "quality_gate": "normal",
+    "simplicity_gate": "normal",
+    "design_gate": "ui",
+    "task_profile_gate": "normal",
+    "implementation_gate": "normal",
+    "ui_evidence_gate": "ui",
+    "runtime_evidence_gate": "runtime-debug",
+    "memory_guard": "learning"
+  },
+  "v5_focus": {
+    "purpose": "Implementation-first Codex harness with evidence-based UI/runtime validation and audited self-improvement.",
+    "inherits": [
+      "v2 implementation performance",
+      "v3 high-risk strictness",
+      "v4 simplicity and UI discipline"
+    ],
+    "non_negotiables": [
+      "coding correctness outranks visual QA",
+      "screenshot-only completion is forbidden for normal+ UI work",
+      "high-risk routing overrides UI routing",
+      "scripts validate evidence shape and objective violations only",
+      "memory cannot silently change active policy"
+    ],
+    "not_visual_first": true
+  }
+}

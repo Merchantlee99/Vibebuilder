@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "frontier_model": "gpt-5.5",
+  "default_reasoning_effort": "medium",
+  "routing": {
+    "orchestrator": {
+      "model": "gpt-5.5",
+      "reasoning_effort": "high",
+      "use_when": "high-value planning, cross-agent synthesis, ambiguous architecture, or final decision making"
+    },
+    "pm_strategist": {
+      "model": "gpt-5.5",
+      "reasoning_effort": "high",
+      "use_when": "product planning, PRD, acceptance criteria, prioritization"
+    },
+    "pm_redteam": {
+      "model": "gpt-5.5",
+      "reasoning_effort": "high",
+      "use_when": "red-team review of product assumptions, scope, or success metrics"
+    },
+    "task_distributor": {
+      "model": "gpt-5.5",
+      "reasoning_effort": "high",
+      "use_when": "parallel implementation decomposition and ownership planning"
+    },
+    "reviewer": {
+      "model": "gpt-5.5",
+      "reasoning_effort": "high",
+      "use_when": "independent correctness, regression, security, and test review"
+    },
+    "security_auditor": {
+      "model": "gpt-5.5",
+      "reasoning_effort": "high",
+      "use_when": "auth, payments, secrets, sensitive data, destructive operations, or compliance"
+    },
+    "docs_researcher": {
+      "model": "gpt-5.4-mini",
+      "reasoning_effort": "medium",
+      "use_when": "bounded official documentation verification"
+    },
+    "code_mapper": {
+      "model": "gpt-5.4-mini",
+      "reasoning_effort": "medium",
+      "use_when": "read-only code path mapping before implementation"
+    },
+    "browser_debugger": {
+      "model": "gpt-5.4-mini",
+      "reasoning_effort": "medium",
+      "use_when": "browser reproduction, UI QA, and visual flow investigation"
+    },
+    "browser_qa": {
+      "model": "gpt-5.4-mini",
+      "reasoning_effort": "medium",
+      "use_when": "rendered UI/runtime reproduction, route-state-viewport checks, console errors, and screenshot evidence"
+    },
+    "visual_reviewer": {
+      "model": "gpt-5.5",
+      "reasoning_effort": "high",
+      "use_when": "independent UI evidence review, density, customer language, layout, accessibility, and destructive-action clarity"
+    },
+    "learning_curator": {
+      "model": "gpt-5.5",
+      "reasoning_effort": "high",
+      "use_when": "Hermes-style repeated failure clustering and proposed workflow improvement review"
+    },
+    "worker": {
+      "model": "gpt-5.4",
+      "reasoning_effort": "medium",
+      "use_when": "bounded implementation inside explicit write scope"
+    }
+  },
+  "rules": [
+    "Use the frontier model for high-risk planning, red-team, security, and final review.",
+    "Use smaller models for bounded read-only mapping and documentation checks.",
+    "Do not increase subagent depth beyond 1 unless the user explicitly asks for recursive delegation.",
+    "If a requested model is unavailable in the active Codex environment, fall back to the strongest available model and record the fallback."
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "kind": "bugfix",
+  "tier": "normal",
+  "surface": "frontend",
+  "changed_paths": ["src/app.tsx"],
+  "required_gates": ["quality_gate", "review_gate", "implementation_gate", "ui_evidence_gate"],
+  "ui_evidence": "required",
+  "strict_required": false,
+  "not_applicable_reason": "",
+  "residual_risk": ""
+}

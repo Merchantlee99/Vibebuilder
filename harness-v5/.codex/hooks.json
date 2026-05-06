@@ -1,0 +1,41 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 .codex/hooks/pre_tool_use.py",
+            "statusMessage": "Checking harness command policy"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 .codex/hooks/stop.py",
+            "statusMessage": "Checking harness completion gate"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 .codex/hooks/user_prompt_submit.py",
+            "statusMessage": "Loading harness context"
+          }
+        ]
+      }
+    ]
+  }
+}
+

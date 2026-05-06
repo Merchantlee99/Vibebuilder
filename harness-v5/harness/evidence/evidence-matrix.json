@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "statuses": ["pass", "fail", "warning", "not-applicable"],
+  "kinds": ["command", "runtime", "visual", "accessibility", "layout", "review", "risk", "learning", "static-frontend"],
+  "task_routes": {
+    "trivial_code": {
+      "required": ["command"],
+      "optional": ["review"]
+    },
+    "normal_code": {
+      "required": ["command", "review"],
+      "optional": ["runtime", "risk"]
+    },
+    "frontend_logic": {
+      "required": ["command", "runtime", "visual"],
+      "also_required": ["layout|accessibility|review"]
+    },
+    "ui_visual_only": {
+      "required": ["visual"],
+      "also_required": ["layout|accessibility|review"]
+    },
+    "high_risk": {
+      "required": ["risk", "command", "review"],
+      "optional": ["runtime", "visual"]
+    },
+    "learning": {
+      "required": ["learning", "review"]
+    }
+  },
+  "blockers": [
+    "missing required evidence",
+    "invalid evidence json",
+    "missing artifact path",
+    "artifact hash mismatch",
+    "normal+ UI evidence is screenshot-only",
+    "UI gate skipped without not_applicable_reason and residual_risk",
+    "high-risk path missing strict_required"
+  ]
+}

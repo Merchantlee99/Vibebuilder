@@ -1,0 +1,27 @@
+.DS_Store
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Harness runtime artifacts are intentionally mutable in real projects.
+harness/telemetry/*.jsonl
+harness/telemetry/*.lock
+harness/telemetry/events.manifest.json
+harness/telemetry/segments/
+harness/context/automation-intents.json
+harness/context/current-task.json
+harness/context/session-index.sqlite3
+harness/context/session-index.sqlite3.tmp
+harness/reviews/review-*.md
+harness/audits/audit-*.md
+harness/evidence/evidence.jsonl
+harness/evidence/artifacts/
+harness/visual/screenshots/
+harness/visual/reports/*.json
+harness/visual/reports/*.md
+harness/visual/layout-maps/
+harness/visual/axe/
+harness/evals/runs/
+harness/memory/*.jsonl
