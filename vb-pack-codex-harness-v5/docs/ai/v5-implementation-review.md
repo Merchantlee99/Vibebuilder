@@ -113,9 +113,9 @@ Results:
 - unittest: 34 tests, pass
 - score: 100/100, pass
 - benchmark: pass
-- v5 trivial gate vs v4: +3.80ms in the latest run
-- v5 normal template gate vs v4: +7.82ms in the latest run
-- v5 quality template vs v4: +4.30ms in the latest run
+- v5 trivial gate vs v4: +14.58ms in the latest run
+- v5 normal template gate vs v4: +8.44ms in the latest run
+- v5 quality template vs v4: +6.59ms in the latest run
 - benchmark warnings: none
 
 ## Issues Found And Fixed

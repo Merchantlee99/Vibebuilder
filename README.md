@@ -17,7 +17,7 @@
 | `vb-pack-codex-harness-v2` | Codex app 평소 개발용 | 자연어 daily driver, subagent ownership, review gate, telemetry, quality gate |
 | `vb-pack-codex-harness-v3` | Codex app 고신뢰 strict 운용 | hooks-on profile, strict gate, high-risk HMAC review, team/production 운영 기준 |
 | `vb-pack-codex-harness-v4` | Codex app creative-daily 운용 | v2 기반에 Karpathy식 단순성 규율과 UI/UX design gate를 추가 |
-| `harness-v5` | Codex app evidence-first 운용 | v2/v3/v4 강점을 보존하고 task profile, runtime/UI evidence, static frontend audit, reviewed self-improvement를 추가 |
+| `vb-pack-codex-harness-v5` | Codex app evidence-first 운용 | v2/v3/v4 강점을 보존하고 task profile, runtime/UI evidence, static frontend audit, reviewed self-improvement를 추가 |
 
 ## 어떤 레퍼런스를 참고했는가
 
@@ -44,7 +44,7 @@
 - 개인 바이브코딩, 일반 앱 개발, 장기 프로젝트의 평소 운영에는 `vb-pack-codex-harness-v2`가 맞다.
 - 결제, 인증/권한, 보안, 금융/트레이딩, DB migration, production 배포, 2인 협업처럼 실패 비용이 큰 작업에는 `vb-pack-codex-harness-v3`가 맞다.
 - 제품 UI, 프론트엔드, 랜딩페이지, SaaS/dashboard, 디자인 시스템, 과잉구현 방지가 중요한 daily 작업에는 `vb-pack-codex-harness-v4`가 맞다.
-- 구현 성능을 유지하면서 UI/runtime evidence, high-risk strictness, frontend static audit, reviewed self-improvement까지 한 번에 요구하려면 `harness-v5`가 맞다.
+- 구현 성능을 유지하면서 UI/runtime evidence, high-risk strictness, frontend static audit, reviewed self-improvement까지 한 번에 요구하려면 `vb-pack-codex-harness-v5`가 맞다.
 - 실사용 기준으로는 단순 daily driver는 v2, 고위험 strict 운영은 v3, UI/제품 빌드 중심은 v4, evidence-first 완료 계약까지 필요하면 v5를 선택하는 흐름을 권장한다.
 
 ## 시작점
@@ -54,4 +54,4 @@
 - Codex v2 pack 소개: [vb-pack-codex-harness-v2/README.md](./vb-pack-codex-harness-v2/README.md)
 - Codex v3 strict pack 소개: [vb-pack-codex-harness-v3/README.md](./vb-pack-codex-harness-v3/README.md)
 - Codex v4 creative-daily pack 소개: [vb-pack-codex-harness-v4/README.md](./vb-pack-codex-harness-v4/README.md)
-- Codex v5 evidence-first pack 소개: [harness-v5/README.md](./harness-v5/README.md)
+- Codex v5 evidence-first pack 소개: [vb-pack-codex-harness-v5/README.md](./vb-pack-codex-harness-v5/README.md)

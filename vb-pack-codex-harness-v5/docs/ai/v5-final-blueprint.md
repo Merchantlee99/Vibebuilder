@@ -27,7 +27,7 @@ The default path must stay fast. Heavy visual, strict, or learning workflows act
 ## Architecture
 
 ```text
-harness-v5/
+vb-pack-codex-harness-v5/
   AGENTS.md
   README.md
   ETHOS.md
