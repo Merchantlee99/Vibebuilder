@@ -1,0 +1,79 @@
+{
+  "schema_version": 4,
+  "framework_version": "v6",
+  "deployment_profile": "template",
+  "enforcement_mode": "advisory",
+  "default_adoption_profile": "intent-routed-spec-evidence",
+  "default_tier": "normal",
+  "state_root": "harness",
+  "control_plane_root": ".codex",
+  "skills_root": ".agents/skills",
+  "review": {
+    "normal_requires_independent_review": true,
+    "high_risk_requires_independent_review": true,
+    "self_review_allowed": false,
+    "high_risk_requires_hmac_approval": true,
+    "prepared_event_required": true
+  },
+  "subagents": {
+    "max_threads": 6,
+    "max_depth": 1,
+    "worker_mode": "worktree",
+    "read_only_roles": [
+      "pm_strategist",
+      "pm_redteam",
+      "docs_researcher",
+      "code_mapper",
+      "task_distributor",
+      "reviewer",
+      "security_auditor",
+      "browser_qa",
+      "visual_reviewer",
+      "learning_curator"
+    ]
+  },
+  "gates": {
+    "plan_gate": "normal",
+    "review_gate": "normal",
+    "finish_gate": "trivial",
+    "strict_gate": "high-risk",
+    "quality_gate": "normal",
+    "simplicity_gate": "normal",
+    "design_gate": "ui",
+    "task_profile_gate": "normal",
+    "implementation_gate": "normal",
+    "ui_evidence_gate": "ui",
+    "runtime_evidence_gate": "runtime-debug",
+    "memory_guard": "learning",
+    "intent_router_gate": "normal",
+    "domain_language_gate": "domain",
+    "spec_gate": "behavior",
+    "req_evidence_gate": "normal",
+    "team_rule_mining_gate": "team",
+    "rule_promotion_gate": "learning",
+    "spec_drift_gate": "review"
+  },
+  "v6_focus": {
+    "purpose": "Natural-language intent-routed Codex harness with spec, domain language, REQ evidence, team-rule mining, and v5 evidence validation.",
+    "inherits": [
+      "v2 implementation performance",
+      "v3 high-risk strictness",
+      "v4 simplicity and UI discipline",
+      "v5 implementation/UI/runtime evidence"
+    ],
+    "non_negotiables": [
+      "natural-language work must be routed before normal+ completion",
+      "routing decisions must be recorded as artifacts",
+      "docs explain and spec governs",
+      "shared language and accepted specs cannot be silently downgraded to match incomplete code",
+      "REQ statements need mapped evidence obligations",
+      "team rules are proposed and reviewed before promotion",
+      "coding correctness outranks visual QA",
+      "screenshot-only completion is forbidden for normal+ UI work",
+      "high-risk routing overrides UI routing",
+      "scripts validate evidence shape and objective violations only",
+      "memory cannot silently change active policy"
+    ],
+    "natural_language_first": true
+  }
+}

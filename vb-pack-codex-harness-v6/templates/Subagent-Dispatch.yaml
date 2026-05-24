@@ -1,0 +1,11 @@
+role: ""
+goal: ""
+mode: "read-only"
+read_scope: []
+write_scope: []
+forbidden_paths: []
+stop_condition: ""
+expected_artifact: ""
+validation: ""
+notes: ""
+
