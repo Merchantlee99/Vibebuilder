@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "task_id": "task-v6-example",
+  "request_summary": "Implement a behavior change from a natural-language request.",
+  "mode": "implementation_from_intent",
+  "tier": "normal",
+  "surface": "backend",
+  "codebase_context": true,
+  "needs_grill": false,
+  "needs_grill_with_docs": true,
+  "needs_domain_language": true,
+  "needs_spec": true,
+  "spec_layers": ["L1", "L2"],
+  "needs_team_rule_scan": true,
+  "team_rule_promotion_allowed": false,
+  "governing_reqs": ["REQ-EXAMPLE-001:S1"],
+  "feature_archetypes": ["approval"],
+  "required_gates": [
+    "intent_router_gate",
+    "domain_language_gate",
+    "spec_gate",
+    "req_evidence_gate",
+    "implementation_gate",
+    "review_gate",
+    "team_rule_mining_gate"
+  ],
+  "routing_reason": "The request introduces shared domain language and behavior that should be governed before implementation.",
+  "completion_rule": "Complete only after routing, domain language, spec, REQ evidence, implementation evidence, and independent review pass."
+}
