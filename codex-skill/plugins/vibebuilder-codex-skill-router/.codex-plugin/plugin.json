@@ -1,0 +1,22 @@
+{
+  "name": "vibebuilder-codex-skill-router",
+  "version": "0.1.0",
+  "description": "Vibebuilder Codex Skill Router plugin for automatic task routing, skill handoff, constraint preservation, and fixture-backed evals.",
+  "author": {
+    "name": "Merchantlee99"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Vibebuilder Codex Skill Router",
+    "shortDescription": "Route Codex work into skills, constraints, and evidence gates.",
+    "longDescription": "A repo-local Codex plugin example that packages a Codex skill router, automatic route classifier, train/heldout route fixtures, and self-test scripts. It is designed for Vibebuilder-style harness packs where natural-language requests should become route, constraint, skill, and evidence contracts before work starts.",
+    "developerName": "Merchantlee99",
+    "category": "Productivity",
+    "capabilities": [
+      "skills",
+      "routing",
+      "evals"
+    ],
+    "defaultPrompt": "Classify this task with the Vibebuilder Codex Skill Router and report the route, constraints, suggested skills, forbidden actions, and required evidence."
+  }
+}

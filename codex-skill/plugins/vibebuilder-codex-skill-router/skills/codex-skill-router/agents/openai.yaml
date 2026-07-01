@@ -1,0 +1,4 @@
+interface:
+  display_name: "Codex Skill Router"
+  short_description: "Route Codex tasks into skills, constraints, and evidence gates"
+  default_prompt: "Classify this Codex task and tell me the route, constraints, skill handoff, forbidden actions, and evidence required."
