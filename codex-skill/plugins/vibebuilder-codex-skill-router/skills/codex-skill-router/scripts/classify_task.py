@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import re
 import sys
 
 
@@ -252,6 +253,120 @@ SECURITY_PATTERNS = [
     "시크릿",
 ]
 
+ARTIFACT_CLASS_KEYWORDS = {
+    "cli": [
+        "cli",
+        "command line",
+        "terminal tool",
+        "command-line",
+        "명령줄",
+        "터미널 도구",
+        "커맨드",
+    ],
+    "web_app": [
+        "web app",
+        "website",
+        "site",
+        "frontend",
+        "react",
+        "next.js",
+        "웹앱",
+        "웹 앱",
+        "웹사이트",
+        "사이트",
+        "프론트엔드",
+    ],
+    "web_service": [
+        "api",
+        "endpoint",
+        "server",
+        "backend service",
+        "webhook",
+        "api 서버",
+        "엔드포인트",
+        "웹훅",
+        "서버",
+    ],
+    "data_pipeline": [
+        "pipeline",
+        "etl",
+        "csv",
+        "jsonl",
+        "dataset",
+        "fixture diff",
+        "파이프라인",
+        "데이터셋",
+        "데이터 처리",
+    ],
+    "ui_surface": [
+        "ui",
+        "ux",
+        "screen",
+        "dashboard",
+        "checkout",
+        "paywall",
+        "onboarding",
+        "landing",
+        "화면",
+        "대시보드",
+        "체크아웃",
+        "페이월",
+        "온보딩",
+        "랜딩",
+    ],
+    "document": [
+        "readme",
+        "docs",
+        "document",
+        "spec",
+        "prd",
+        "문서",
+        "리드미",
+        "스펙",
+        "기획서",
+    ],
+    "research_report": [
+        "research",
+        "market",
+        "paper",
+        "report",
+        "analysis",
+        "조사",
+        "시장",
+        "논문",
+        "리포트",
+        "보고서",
+        "분석",
+    ],
+    "skill_harness": [
+        "skill",
+        "harness",
+        "route fixture",
+        "skillopt",
+        "self-harness",
+        "스킬",
+        "하네스",
+        "라우팅",
+        "픽스처",
+    ],
+    "game": [
+        "game",
+        "canvas",
+        "three.js",
+        "webgl",
+        "게임",
+    ],
+}
+
+PRODUCT_COMPLETE_ARTIFACTS = {
+    "cli",
+    "web_app",
+    "web_service",
+    "data_pipeline",
+    "ui_surface",
+    "game",
+}
+
 DESTRUCTIVE_PATTERNS = [
     "push",
     "deploy",
@@ -294,25 +409,74 @@ BASE_EVIDENCE = {
 }
 
 
+def keyword_matches(text: str, keyword: str) -> bool:
+    if any(ch.isascii() and ch.isalnum() for ch in keyword):
+        return re.search(rf"(?<![A-Za-z0-9_-]){re.escape(keyword)}(?![A-Za-z0-9_-])", text) is not None
+    return keyword in text
+
+
 def match_keywords(text: str, keywords: list[str]) -> list[str]:
-    return [keyword for keyword in keywords if keyword in text]
+    return [keyword for keyword in keywords if keyword_matches(text, keyword)]
 
 
 def any_match(text: str, keywords: list[str]) -> bool:
     return bool(match_keywords(text, keywords))
 
 
-def build_constraints(lowered: str, hits: dict[str, list[str]]) -> dict[str, bool]:
+def infer_artifact_class(lowered: str, *, skill_harness: bool) -> str:
+    if skill_harness:
+        return "skill_harness"
+    for artifact_class, keywords in ARTIFACT_CLASS_KEYWORDS.items():
+        if any_match(lowered, keywords):
+            return artifact_class
+    return "unspecified"
+
+
+def infer_completion_mode(
+    *,
+    route: str,
+    artifact_class: str,
+    read_only: bool,
+    implementation_requested: bool,
+    release_gate: bool,
+) -> str:
+    if release_gate:
+        return "release_gate"
+    if read_only:
+        return "supporting_or_read_only"
+    if implementation_requested and artifact_class in PRODUCT_COMPLETE_ARTIFACTS:
+        return "product_complete"
+    if implementation_requested:
+        return "code_complete"
+    if route in {"review", "quick"}:
+        return "supporting_or_read_only"
+    return "analysis_complete"
+
+
+def build_constraints(lowered: str, hits: dict[str, list[str]]) -> dict[str, object]:
     release_notes_query = any_match(lowered, RELEASE_NOTES_PATTERNS)
     release_gate = bool(hits.get("release")) and not release_notes_query
     review_requested = bool(hits.get("review"))
-    product_ui = bool(hits.get("design"))
     security_sensitive = any_match(lowered, SECURITY_PATTERNS)
     read_only = any_match(lowered, READ_ONLY_PATTERNS)
     current_docs_required = any_match(lowered, CURRENT_DOCS_PATTERNS)
     skill_harness = any_match(lowered, SKILL_HARNESS_PATTERNS)
+    design_hits = hits.get("design", [])
+    skill_flow_only = skill_harness and bool(design_hits) and set(design_hits) <= {"플로우", "design"}
+    product_ui = bool(design_hits) and not skill_flow_only
     destructive_action_requested = any_match(lowered, DESTRUCTIVE_PATTERNS)
-    implementation_requested = bool(hits.get("normal")) and not read_only
+    normal_hits = hits.get("normal", [])
+    current_applied_only = bool(normal_hits) and set(normal_hits) <= {"적용"} and "적용된" in lowered
+    implementation_requested = bool(normal_hits) and not current_applied_only and not read_only
+    artifact_class = infer_artifact_class(lowered, skill_harness=skill_harness)
+    route_hint = "release" if release_gate else ""
+    completion_mode = infer_completion_mode(
+        route=route_hint,
+        artifact_class=artifact_class,
+        read_only=read_only,
+        implementation_requested=implementation_requested,
+        release_gate=release_gate,
+    )
     return {
         "read_only": read_only,
         "current_docs_required": current_docs_required,
@@ -324,6 +488,8 @@ def build_constraints(lowered: str, hits: dict[str, list[str]]) -> dict[str, boo
         "destructive_action_requested": destructive_action_requested,
         "implementation_requested": implementation_requested,
         "release_notes_query": release_notes_query,
+        "artifact_class": artifact_class,
+        "completion_mode": completion_mode,
     }
 
 
@@ -371,7 +537,7 @@ def suggested_skills(route: str, constraints: dict[str, bool]) -> list[str]:
     return skills
 
 
-def evidence_required(route: str, constraints: dict[str, bool]) -> list[str]:
+def evidence_required(route: str, constraints: dict[str, object]) -> list[str]:
     evidence = list(BASE_EVIDENCE[route])
     if constraints["current_docs_required"] and "current_primary_sources" not in evidence:
         evidence.append("current_primary_sources")
@@ -379,6 +545,28 @@ def evidence_required(route: str, constraints: dict[str, bool]) -> list[str]:
         evidence.append("explicit_no_edit_confirmation")
     if constraints["skill_harness"] and "route_fixture_or_heldout_validation" not in evidence:
         evidence.append("route_fixture_or_heldout_validation")
+    artifact_class = constraints.get("artifact_class")
+    artifact_evidence = {
+        "cli": "headless_cli_run_or_golden_output",
+        "web_app": "rendered_visual_state_evidence",
+        "web_service": "api_smoke_or_contract_check",
+        "data_pipeline": "fixture_output_diff",
+        "ui_surface": "rendered_visual_state_evidence",
+        "document": "source_consistency_check",
+        "research_report": "source_citations_and_fact_inference_split",
+        "skill_harness": "train_and_heldout_route_validation",
+        "game": "runtime_or_visual_playability_probe",
+    }.get(artifact_class)
+    if artifact_evidence and artifact_evidence not in evidence:
+        evidence.append(artifact_evidence)
+    completion_mode = constraints.get("completion_mode")
+    if completion_mode in {"product_complete", "release_gate"}:
+        for item in ("safe_but_wrong_artifact_class_check", "claim_to_evidence_matrix"):
+            if item not in evidence:
+                evidence.append(item)
+    elif completion_mode == "supporting_or_read_only":
+        if "artifact_scope_confirmation" not in evidence:
+            evidence.append("artifact_scope_confirmation")
     return evidence
 
 
@@ -411,6 +599,13 @@ def classify(text: str) -> dict[str, object]:
 
     constraints = build_constraints(lowered, hits)
     route = choose_route(hits, constraints)
+    constraints["completion_mode"] = infer_completion_mode(
+        route=route,
+        artifact_class=str(constraints.get("artifact_class", "unspecified")),
+        read_only=bool(constraints["read_only"]),
+        implementation_requested=bool(constraints["implementation_requested"]),
+        release_gate=bool(constraints["release_gate"]),
+    )
     return {
         "route": route,
         "confidence": confidence_for(route, hits, constraints),

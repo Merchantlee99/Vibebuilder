@@ -2,7 +2,7 @@
 
 This plugin packages a single Codex skill: `codex-skill-router`.
 
-It is a reference implementation for Vibebuilder packs that want Codex to classify work before acting. The skill returns a route, constraints, suggested skill handoff, forbidden actions, and evidence requirements.
+It is a reference implementation for Vibebuilder packs that want Codex to classify work before acting. The skill returns a route, constraints, artifact class, completion mode, suggested skill handoff, forbidden actions, and evidence requirements.
 
 ## Included Skill
 
@@ -17,7 +17,7 @@ The skill includes:
 - `scripts/route_eval.py`: route fixture regression test.
 - `scripts/self_test.py`: local smoke test.
 - `fixtures/route_fixtures.jsonl`: train and heldout cases.
-- `references/`: readable contracts for adoption and routing.
+- `references/`: readable contracts for adoption, routing, artifact evidence, and safe-but-wrong completion gates.
 
 ## Installation Shape
 
@@ -47,6 +47,7 @@ flowchart TD
     S --> C["scripts/classify_task.py"]
     S --> F["fixtures/route_fixtures.jsonl"]
     S --> R["references/*.md"]
+    R --> O["ouroboros-lite-gates.md"]
     F --> E["scripts/route_eval.py"]
     C --> E
     E --> T["scripts/self_test.py"]
