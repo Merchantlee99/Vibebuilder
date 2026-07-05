@@ -10,7 +10,7 @@ The goal is not to replace `vb-pack-codex-harness-v6`. This folder is smaller an
 | --- | --- |
 | `plugins/vibebuilder-codex-skill-router/` | Codex plugin scaffold with `.codex-plugin/plugin.json` |
 | `plugins/vibebuilder-codex-skill-router/skills/codex-skill-router/` | Installable skill folder |
-| `scripts/classify_task.py` | Turns a request into route, constraints, skills, forbidden actions, and evidence |
+| `scripts/classify_task.py` | Turns a request into route, constraints, artifact class, completion mode, skills, forbidden actions, and evidence |
 | `fixtures/route_fixtures.jsonl` | Train and heldout examples for routing behavior |
 | `scripts/route_eval.py` | Regression checker for route behavior |
 | `scripts/self_test.py` | Local smoke test for scripts and route fixtures |
@@ -24,13 +24,15 @@ flowchart TD
     B --> C["classify_task.py"]
     C --> D["Route: quick / normal / deep / ultra / design / debug / review / release"]
     C --> E["Constraints: read_only, current_docs_required, release_gate, product_ui"]
-    C --> F["Suggested skills"]
-    C --> G["Evidence required"]
-    E --> H["Forbidden actions"]
-    F --> I["Codex execution"]
-    G --> I
-    H --> I
-    I --> J["Completion with proof"]
+    C --> F["Artifact class + completion mode"]
+    C --> G["Suggested skills"]
+    C --> H["Evidence required"]
+    E --> I["Forbidden actions"]
+    F --> J["Safe-but-wrong gate"]
+    G --> J
+    H --> J
+    I --> J
+    J --> N["Completion with proof"]
     K["route_fixtures.jsonl"] --> L["route_eval.py"]
     C --> L
     L --> M["train + heldout validation"]
@@ -64,7 +66,7 @@ sequenceDiagram
 
     U->>S: Natural-language task
     S->>C: Classify request
-    C-->>S: route + constraints + suggested_skills
+    C-->>S: route + constraints including artifact_class/completion_mode + suggested_skills
     S->>W: Handoff with constraints
     W->>E: Run route-appropriate checks
     E-->>S: pass/fail/not-run evidence
@@ -85,9 +87,17 @@ Expected shape:
   "route": "deep",
   "constraints": {
     "read_only": true,
-    "current_docs_required": false
+    "current_docs_required": false,
+    "artifact_class": "research_report",
+    "completion_mode": "supporting_or_read_only"
   },
   "suggested_skills": ["evidence-loop"],
+  "evidence_required": [
+    "tests_or_contract_reasoning",
+    "explicit_no_edit_confirmation",
+    "source_citations_and_fact_inference_split",
+    "artifact_scope_confirmation"
+  ],
   "forbidden_actions": ["edit_files", "write_files", "stage_or_commit_changes"]
 }
 ```
@@ -106,7 +116,7 @@ Run the repo-level test:
 python3 -m unittest codex-skill/tests/test_codex_skill.py
 ```
 
-The key safety property is that routing changes must pass both train and heldout fixtures before being treated as an improvement.
+The key safety property is that routing changes must pass both train and heldout fixtures before being treated as an improvement. Product-complete claims must also pass the artifact-class and safe-but-wrong checks so a generated checklist, doc, or handoff is not mislabeled as the requested runnable artifact.
 
 ## How To Extend
 

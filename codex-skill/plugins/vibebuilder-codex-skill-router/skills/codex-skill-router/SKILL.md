@@ -7,15 +7,16 @@ description: Vibebuilder Codex skill and plugin router. Use when a Codex task ne
 
 ## Overview
 
-Use this skill to classify a natural-language Codex request before spending implementation tokens. It turns a request into a route, constraints, suggested skills, forbidden actions, and evidence obligations.
+Use this skill to classify a natural-language Codex request before spending implementation tokens. It turns a request into a route, constraints, artifact class, completion mode, suggested skills, forbidden actions, and evidence obligations.
 
 ## Workflow
 
 1. Run or mentally apply `scripts/classify_task.py` to classify the request.
 2. Preserve the returned `constraints` across the whole turn.
-3. Use the narrowest suggested skill set that satisfies the route.
-4. Before claiming completion, satisfy the returned `evidence_required` list.
-5. When route logic changes, add or update `fixtures/route_fixtures.jsonl` and run `scripts/route_eval.py --suite train` plus `--suite heldout`.
+3. Preserve `artifact_class` and `completion_mode` from `constraints`; they decide whether the task needs product evidence, code evidence, release evidence, or only supporting/read-only evidence.
+4. Use the narrowest suggested skill set that satisfies the route.
+5. Before claiming completion, satisfy the returned `evidence_required` list and run the safe-but-wrong check from `references/ouroboros-lite-gates.md`.
+6. When route logic changes, add or update `fixtures/route_fixtures.jsonl` and run `scripts/route_eval.py --suite train` plus `--suite heldout`.
 
 ## Route Semantics
 
@@ -36,6 +37,8 @@ Use this skill to classify a natural-language Codex request before spending impl
 - `release_gate=true`: require gate status, risk inventory, rollback notes, and go/no-go posture.
 - `security_sensitive=true`: include security/safety review and avoid exposing secrets.
 - `skill_harness=true`: use fixture-backed validation before accepting route or skill changes.
+- `artifact_class`: requested artifact category such as `cli`, `web_app`, `web_service`, `data_pipeline`, `ui_surface`, `document`, `research_report`, `skill_harness`, `game`, or `unspecified`.
+- `completion_mode`: intended finish state: `product_complete`, `code_complete`, `release_gate`, `supporting_or_read_only`, or `analysis_complete`.
 
 ## Resources
 
@@ -44,6 +47,7 @@ Use this skill to classify a natural-language Codex request before spending impl
 - `scripts/self_test.py`: py-compile and train/heldout eval wrapper.
 - `fixtures/route_fixtures.jsonl`: train and held-out routing examples.
 - `references/routing-contract.md`: readable contract for route output.
+- `references/ouroboros-lite-gates.md`: artifact class, completion mode, safe-but-wrong, and claim-to-evidence gates.
 - `references/plugin-adoption.md`: how the repo-local plugin is laid out and adopted.
 
 ## Output Contract
@@ -52,6 +56,7 @@ Return:
 
 - selected route.
 - active constraints.
+- artifact class and completion mode.
 - suggested skill handoff.
 - forbidden actions.
 - evidence required.
