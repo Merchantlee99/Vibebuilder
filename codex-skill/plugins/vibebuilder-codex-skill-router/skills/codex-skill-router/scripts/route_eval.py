@@ -54,6 +54,16 @@ def check_fixture(classifier: Any, fixture: dict[str, Any]) -> list[str]:
     if expected_route and result.get("route") != expected_route:
         errors.append(f"route expected {expected_route!r}, got {result.get('route')!r}")
 
+    expected_policy = fixture.get("expected_policy")
+    if expected_policy and result.get("routing_policy") != expected_policy:
+        errors.append(f"routing_policy expected {expected_policy!r}, got {result.get('routing_policy')!r}")
+
+    expected_effort = fixture.get("expected_effort")
+    if expected_effort and result.get("reasoning_effort_hint") != expected_effort:
+        errors.append(
+            f"reasoning_effort_hint expected {expected_effort!r}, got {result.get('reasoning_effort_hint')!r}"
+        )
+
     for name, expected in fixture.get("expect_constraints", {}).items():
         if not has_constraint(result, name, expected):
             got = result.get("constraints", {}).get(name) if isinstance(result.get("constraints"), dict) else None
@@ -69,6 +79,32 @@ def check_fixture(classifier: Any, fixture: dict[str, Any]) -> list[str]:
     for skill in fixture.get("forbid_skills", []):
         if skill in skills:
             errors.append(f"forbidden skill {skill!r} present")
+
+    max_skills = fixture.get("max_skills")
+    if isinstance(max_skills, int) and len(skills) > max_skills:
+        errors.append(f"suggested_skills expected at most {max_skills}, got {len(skills)}: {skills!r}")
+
+    evidence = result.get("evidence_required", [])
+    if not isinstance(evidence, list):
+        errors.append("evidence_required is not a list")
+        evidence = []
+    for item in fixture.get("expect_evidence", []):
+        if item not in evidence:
+            errors.append(f"missing evidence {item!r}")
+    for item in fixture.get("forbid_evidence", []):
+        if item in evidence:
+            errors.append(f"forbidden evidence {item!r} present")
+
+    forbidden_actions = result.get("forbidden_actions", [])
+    if not isinstance(forbidden_actions, list):
+        errors.append("forbidden_actions is not a list")
+        forbidden_actions = []
+    for action in fixture.get("expect_forbidden", []):
+        if action not in forbidden_actions:
+            errors.append(f"missing forbidden action {action!r}")
+    for action in fixture.get("forbid_forbidden", []):
+        if action in forbidden_actions:
+            errors.append(f"unexpected forbidden action {action!r}")
 
     return errors
 
