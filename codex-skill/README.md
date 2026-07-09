@@ -23,6 +23,7 @@
 | `fixtures/route_fixtures.jsonl` | train·held-out 회귀 사례 |
 | `scripts/route_eval.py` | route뿐 아니라 skill 수·권한·effort까지 검증 |
 | `scripts/self_test.py` | compile + train + held-out smoke test |
+| `references/ouroboros-lite-gates.md` | artifact class·completion mode·safe-but-wrong 완료 gate |
 | `tests/test_codex_skill.py` | 패키지·설치기·라우팅 repo-level 테스트 |
 
 ## 구조
@@ -100,4 +101,4 @@ python3 plugins/vibebuilder-codex-skill-router/skills/codex-skill-router/scripts
 python3 -m unittest codex-skill/tests/test_codex_skill.py
 ```
 
-현재 회귀 세트는 단순 route 일치만 확인하지 않는다. 분석의 read-only 기본값, 작은 편집의 0-skill 경로, OpenAI 공식 문서 선택, 원격 쓰기 권한, skill 수 상한을 함께 검사한다.
+현재 회귀 세트는 단순 route 일치만 확인하지 않는다. 분석의 read-only 기본값, 작은 편집의 0-skill 경로, OpenAI 공식 문서 선택, 원격 쓰기 권한, artifact/completion evidence, skill 수 상한을 함께 검사한다.

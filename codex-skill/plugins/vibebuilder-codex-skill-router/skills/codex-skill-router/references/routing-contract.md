@@ -21,6 +21,8 @@
 - `remote_write_requested=true`는 사용자가 push, publish, GitHub 업로드 또는 머지를 명시했을 때만 설정된다.
 - `artifact_class`와 `completion_mode`는 증거 강도를 결정한다.
 - 작은 편집은 전문 스킬 없이 처리할 수 있어야 한다.
+- `product_complete`와 `release_gate`는 `safe_but_wrong_artifact_class_check`와 `claim_to_evidence_matrix`를 요구한다.
+- read-only 지원 산출물은 `artifact_scope_confirmation`으로 제품 완료 주장과 구분한다.
 
 ## 조합 원칙
 
@@ -41,4 +43,4 @@ python3 scripts/route_eval.py --suite train
 python3 scripts/route_eval.py --suite heldout
 ```
 
-route 일치만 보지 않는다. read-only 기본값, skill 수 상한, 공식 문서 선택, evidence와 forbidden action도 함께 회귀 검사한다.
+route 일치만 보지 않는다. read-only 기본값, artifact/completion mode, skill 수 상한, 공식 문서 선택, evidence와 forbidden action도 함께 회귀 검사한다. 세부 gate는 `ouroboros-lite-gates.md`를 따른다.

@@ -23,6 +23,7 @@ flowchart TD
     S --> C["classify_task.py"]
     S --> I["install_global.py"]
     S --> F["route_fixtures.jsonl"]
+    S --> O["ouroboros-lite-gates.md"]
     F --> E["route_eval.py"]
     C --> E
     E --> T["self_test.py"]

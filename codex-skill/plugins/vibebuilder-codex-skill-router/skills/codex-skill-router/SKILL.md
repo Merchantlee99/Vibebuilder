@@ -13,7 +13,8 @@ Prefer GPT-5.6's native intent handling for ordinary work. Use this skill only t
 2. Preserve `constraints` and `forbidden_actions`; treat `suggested_skills` as the smallest sufficient specialist set.
 3. Interpret `reasoning_effort_hint` as a configuration hint. Do not add “think harder” or similar prompt text.
 4. Satisfy `evidence_required` before making a completion claim.
-5. When routing changes, update fixtures and run both train and held-out evals.
+5. For `product_complete` or `release_gate`, run the artifact-class and safe-but-wrong checks in `references/ouroboros-lite-gates.md`.
+6. When routing changes, update fixtures and run both train and held-out evals.
 
 ## Composition Rules
 
@@ -46,4 +47,4 @@ python3 scripts/route_eval.py --suite heldout
 python3 scripts/self_test.py
 ```
 
-Read `references/routing-contract.md` for the output schema and `references/plugin-adoption.md` for installation and rollback details.
+Read `references/routing-contract.md` for the output schema, `references/ouroboros-lite-gates.md` for artifact/completion evidence, and `references/plugin-adoption.md` for installation and rollback details.

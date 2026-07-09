@@ -32,6 +32,7 @@ class CodexSkillPackageTest(unittest.TestCase):
             PLUGIN / "README.md",
             SKILL / "SKILL.md",
             SKILL / "references" / "routing-contract.md",
+            SKILL / "references" / "ouroboros-lite-gates.md",
             SKILL / "references" / "plugin-adoption.md",
         ]
         for path in paths:
@@ -114,6 +115,46 @@ class CodexSkillPackageTest(unittest.TestCase):
         self.assertEqual(proc.returncode, 0, proc.stderr)
         payload = json.loads(proc.stdout)
         self.assertEqual(payload["suggested_skills"], ["openai-docs"])
+
+    def test_cli_product_requires_artifact_and_claim_evidence(self) -> None:
+        proc = subprocess.run(
+            [
+                sys.executable,
+                str(SKILL / "scripts" / "classify_task.py"),
+                "할 일 관리 CLI 만들어줘. 실행 예시까지 검증해줘",
+            ],
+            cwd=SKILL,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        payload = json.loads(proc.stdout)
+        self.assertEqual(payload["constraints"]["artifact_class"], "cli")
+        self.assertEqual(payload["constraints"]["completion_mode"], "product_complete")
+        self.assertIn("headless_cli_run_or_golden_output", payload["evidence_required"])
+        self.assertIn("safe_but_wrong_artifact_class_check", payload["evidence_required"])
+        self.assertIn("claim_to_evidence_matrix", payload["evidence_required"])
+        self.assertEqual(payload["suggested_skills"], ["evidence-loop"])
+
+    def test_read_only_release_assessment_keeps_release_gate_mode(self) -> None:
+        proc = subprocess.run(
+            [
+                sys.executable,
+                str(SKILL / "scripts" / "classify_task.py"),
+                "배포하지 말고 릴리즈 게이트만 검수해줘",
+            ],
+            cwd=SKILL,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        payload = json.loads(proc.stdout)
+        self.assertTrue(payload["constraints"]["read_only"])
+        self.assertEqual(payload["constraints"]["completion_mode"], "release_gate")
+        self.assertIn("gate_checklist", payload["evidence_required"])
+        self.assertIn("claim_to_evidence_matrix", payload["evidence_required"])
 
     def test_global_installer_creates_lean_gpt56_setup(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

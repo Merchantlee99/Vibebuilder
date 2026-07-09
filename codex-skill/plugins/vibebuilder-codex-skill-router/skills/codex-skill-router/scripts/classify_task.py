@@ -95,6 +95,9 @@ ROUTE_KEYWORDS = {
         "pricing page",
         "landing",
         "button",
+        "frontend",
+        "react",
+        "web app",
         "화면",
         "디자인",
         "인터페이스",
@@ -105,6 +108,8 @@ ROUTE_KEYWORDS = {
         "결제 화면",
         "랜딩",
         "버튼",
+        "프론트엔드",
+        "웹앱",
     ],
     "ultra": [
         "ultra",
@@ -427,10 +432,10 @@ def infer_completion_mode(
     implementation_requested: bool,
     release_gate: bool,
 ) -> str:
-    if read_only:
-        return "supporting_or_read_only" if route in {"quick", "review", "release"} else "analysis_complete"
     if release_gate:
         return "release_gate"
+    if read_only:
+        return "supporting_or_read_only" if route in {"quick", "review", "release"} else "analysis_complete"
     if implementation_requested and artifact_class in PRODUCT_COMPLETE_ARTIFACTS:
         return "product_complete"
     if implementation_requested:
@@ -576,6 +581,13 @@ def evidence_required(route: str, constraints: dict[str, Any]) -> list[str]:
     }.get(constraints["artifact_class"])
     if artifact_evidence and artifact_evidence not in evidence:
         evidence.append(artifact_evidence)
+    completion_mode = constraints.get("completion_mode")
+    if completion_mode in {"product_complete", "release_gate"}:
+        for item in ("safe_but_wrong_artifact_class_check", "claim_to_evidence_matrix"):
+            if item not in evidence:
+                evidence.append(item)
+    elif completion_mode == "supporting_or_read_only" and "artifact_scope_confirmation" not in evidence:
+        evidence.append("artifact_scope_confirmation")
     return evidence
 
 
