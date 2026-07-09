@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run Codex Extreme Operator local self-checks."""
+"""Run GPT-5.6 Codex Skill Router local self-checks."""
 
 from __future__ import annotations
 

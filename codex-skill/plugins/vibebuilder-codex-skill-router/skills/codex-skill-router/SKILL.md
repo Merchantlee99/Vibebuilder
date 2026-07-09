@@ -1,58 +1,49 @@
 ---
 name: codex-skill-router
-description: Vibebuilder Codex skill and plugin router. Use when a Codex task needs intent classification, automatic skill selection, read-only protection, current-docs detection, release/debug/review/design routing, or fixture-backed validation before coding, review, release, or harness improvement work.
+description: Explicit GPT-5.6 native-first router for auditing, designing, installing, or validating Codex skill combinations, global skill setup, routing fixtures, and harness behavior. Use when the user explicitly invokes $codex-skill-router or asks to change or inspect Codex skills, routing, AGENTS guidance, or global harness configuration. Do not use for ordinary coding, review, debugging, research, or UI work merely because the task is complex.
 ---
 
-# Codex Skill Router
+# GPT-5.6 Codex Skill Router
 
-## Overview
-
-Use this skill to classify a natural-language Codex request before spending implementation tokens. It turns a request into a route, constraints, suggested skills, forbidden actions, and evidence obligations.
+Prefer GPT-5.6's native intent handling for ordinary work. Use this skill only to inspect or change the skill harness itself.
 
 ## Workflow
 
-1. Run or mentally apply `scripts/classify_task.py` to classify the request.
-2. Preserve the returned `constraints` across the whole turn.
-3. Use the narrowest suggested skill set that satisfies the route.
-4. Before claiming completion, satisfy the returned `evidence_required` list.
-5. When route logic changes, add or update `fixtures/route_fixtures.jsonl` and run `scripts/route_eval.py --suite train` plus `--suite heldout`.
+1. Run `scripts/classify_task.py "<request>"` for a deterministic first-pass contract.
+2. Preserve `constraints` and `forbidden_actions`; treat `suggested_skills` as the smallest sufficient specialist set.
+3. Interpret `reasoning_effort_hint` as a configuration hint. Do not add “think harder” or similar prompt text.
+4. Satisfy `evidence_required` before making a completion claim.
+5. When routing changes, update fixtures and run both train and held-out evals.
 
-## Route Semantics
+## Composition Rules
 
-- `quick`: one-command checks, small explanations, current release-note lookups.
-- `normal`: bounded implementation or docs edits with focused evidence.
-- `deep`: architecture, backend contracts, evals, harness work, or read-only structure analysis.
-- `ultra`: broad research, market/strategy, exhaustive analysis, or high-ambiguity harness changes.
-- `design`: product UI, UX, onboarding, paywall, dashboard, checkout, or responsive visual work.
-- `debug`: failing tests, crashes, wrong output, performance regressions, or root-cause analysis.
-- `review`: code review, audit, red-team, regression/security review, or critique.
-- `release`: launch, production, deployment, packaging, go/no-go, rollback, or readiness work.
+- Keep quick answers, small edits, prose changes, and routine code work native-first with no meta-skill stack.
+- Use `openai-docs` for current OpenAI, GPT, ChatGPT, or Codex claims.
+- Use `harness-doctor` for skill and routing changes.
+- Use `debug-root-cause`, `review-swarm`, `deep-research-swarm`, `tdd-implementation`, or `visual-qa` only when their narrow trigger matches.
+- Use `lazyweb-design` only for substantial product-UI discovery, critique, or redesign.
+- Add `evidence-loop` for release gates, behavior fixes, or product-complete claims, not every edit.
+- Add `git-checkpoint` only when the user explicitly authorizes a remote publish flow.
 
-## Constraint Rules
+## Global Installation
 
-- `read_only=true`: do not edit, stage, commit, format, migrate, or run write-heavy commands.
-- `current_docs_required=true`: use official/current sources before unstable claims.
-- `product_ui=true`: use UI references and rendered evidence when implementation is in scope.
-- `release_gate=true`: require gate status, risk inventory, rollback notes, and go/no-go posture.
-- `security_sensitive=true`: include security/safety review and avoid exposing secrets.
-- `skill_harness=true`: use fixture-backed validation before accepting route or skill changes.
+Run `scripts/install_global.py` only when the user explicitly asks to change global Codex behavior. It:
 
-## Resources
+- installs this skill to `$HOME/.agents/skills/codex-skill-router`;
+- replaces broad global routing blocks with a compact GPT-5.6 contract;
+- sets default reasoning effort to `high`;
+- backs up and archives the legacy `apex`, `codex-extreme-operator`, and `design-impact-router` entry points outside active discovery, while retaining disabled config entries;
+- migrates stale `network_access`, `child_agents_md`, `plugin_hooks`, and `codex_hooks` config keys for the current App CLI;
+- creates a timestamped backup before writing.
 
-- `scripts/classify_task.py`: route classifier used by the skill.
-- `scripts/route_eval.py`: regression test for route, constraint, and skill selection.
-- `scripts/self_test.py`: py-compile and train/heldout eval wrapper.
-- `fixtures/route_fixtures.jsonl`: train and held-out routing examples.
-- `references/routing-contract.md`: readable contract for route output.
-- `references/plugin-adoption.md`: how the repo-local plugin is laid out and adopted.
+Use `--dry-run` before installation when the target environment is unfamiliar.
 
-## Output Contract
+## Validation
 
-Return:
+```bash
+python3 scripts/route_eval.py --suite train
+python3 scripts/route_eval.py --suite heldout
+python3 scripts/self_test.py
+```
 
-- selected route.
-- active constraints.
-- suggested skill handoff.
-- forbidden actions.
-- evidence required.
-- validation run or explicit reason validation was not run.
+Read `references/routing-contract.md` for the output schema and `references/plugin-adoption.md` for installation and rollback details.

@@ -1,4 +1,7 @@
 interface:
-  display_name: "Codex Skill Router"
-  short_description: "Route Codex tasks into skills, constraints, and evidence gates"
-  default_prompt: "Classify this Codex task and tell me the route, constraints, skill handoff, forbidden actions, and evidence required."
+  display_name: "GPT-5.6 Codex Skill Router"
+  short_description: "Design lean Codex skill combinations for GPT-5.6"
+  default_prompt: "Use $codex-skill-router to audit this Codex skill setup and return the smallest safe specialist combination."
+
+policy:
+  allow_implicit_invocation: false

@@ -1,117 +1,103 @@
-# Codex Skill
+# GPT-5.6 Codex Skill Router
 
-`codex-skill/` is a repo-local example for packaging a Codex skill and plugin around automatic task routing. It takes the `codex-extreme-operator` style workflow and turns it into a shareable Vibebuilder reference folder.
+`codex-skill/`은 GPT-5.6에서 전역 스킬을 많이 쌓는 대신, 필요한 전문 스킬만 선택하도록 만든 repo-local 플러그인 예시다.
 
-The goal is not to replace `vb-pack-codex-harness-v6`. This folder is smaller and more focused: it shows how to bundle a Codex plugin, one skill, route fixtures, route evals, and README-level diagrams.
+핵심 원칙은 `native-first`다.
 
-## What This Folder Contains
+- 작은 수정과 일반 구현은 GPT-5.6이 직접 처리한다.
+- 범용 라우터를 모든 복잡한 작업 앞에 강제로 두지 않는다.
+- OpenAI 문서, 디버깅, 리뷰, TDD, UI 검증처럼 실제 절차가 필요한 경우에만 전문 스킬을 사용한다.
+- 전역 `AGENTS.md`는 짧게 유지하고, 프로젝트 규칙은 각 저장소 가까이에 둔다.
+- skill router 자체는 암묵적으로 실행하지 않고 `$codex-skill-router`로 명시 호출한다.
 
-| Path | Purpose |
+이 방향은 OpenAI의 [GPT-5.6 가이드](https://developers.openai.com/api/docs/guides/latest-model)와 [Codex Skills 문서](https://developers.openai.com/codex/concepts/customization#skills)의 짧은 프롬프트·점진적 공개 원칙을 따른다.
+
+## 포함된 구성
+
+| 경로 | 역할 |
 | --- | --- |
-| `plugins/vibebuilder-codex-skill-router/` | Codex plugin scaffold with `.codex-plugin/plugin.json` |
-| `plugins/vibebuilder-codex-skill-router/skills/codex-skill-router/` | Installable skill folder |
-| `scripts/classify_task.py` | Turns a request into route, constraints, skills, forbidden actions, and evidence |
-| `fixtures/route_fixtures.jsonl` | Train and heldout examples for routing behavior |
-| `scripts/route_eval.py` | Regression checker for route behavior |
-| `scripts/self_test.py` | Local smoke test for scripts and route fixtures |
-| `tests/test_codex_skill.py` | Repo-level structure and behavior test |
+| `plugins/vibebuilder-codex-skill-router/` | Codex plugin manifest와 사용자 설명 |
+| `skills/codex-skill-router/SKILL.md` | 명시적 GPT-5.6 skill-harness router |
+| `scripts/classify_task.py` | native-first route·권한·skill·증거 계약 생성 |
+| `scripts/install_global.py` | 백업 후 전역 AGENTS/config/skill 설치 |
+| `fixtures/route_fixtures.jsonl` | train·held-out 회귀 사례 |
+| `scripts/route_eval.py` | route뿐 아니라 skill 수·권한·effort까지 검증 |
+| `scripts/self_test.py` | compile + train + held-out smoke test |
+| `tests/test_codex_skill.py` | 패키지·설치기·라우팅 repo-level 테스트 |
 
-## Architecture
+## 구조
 
 ```mermaid
 flowchart TD
-    A["User request"] --> B["codex-skill-router skill"]
-    B --> C["classify_task.py"]
-    C --> D["Route: quick / normal / deep / ultra / design / debug / review / release"]
-    C --> E["Constraints: read_only, current_docs_required, release_gate, product_ui"]
-    C --> F["Suggested skills"]
-    C --> G["Evidence required"]
-    E --> H["Forbidden actions"]
-    F --> I["Codex execution"]
-    G --> I
-    H --> I
-    I --> J["Completion with proof"]
-    K["route_fixtures.jsonl"] --> L["route_eval.py"]
-    C --> L
-    L --> M["train + heldout validation"]
+    A["User request"] --> B{"Skill-harness task?"}
+    B -- "No" --> C["GPT-5.6 native execution"]
+    B -- "Yes / explicit invocation" --> D["$codex-skill-router"]
+    D --> E["classify_task.py"]
+    E --> F["Constraints and artifact class"]
+    E --> G["Smallest specialist set"]
+    E --> H["Evidence and forbidden actions"]
+    G --> I["Specialist execution"]
+    C --> J["Task result"]
+    I --> J
+    H --> J
 ```
 
-## Plugin Layout
+## 스킬 조합
 
 ```mermaid
 flowchart LR
-    A["codex-skill/"] --> B["plugins/"]
-    B --> C["vibebuilder-codex-skill-router/"]
-    C --> D[".codex-plugin/plugin.json"]
-    C --> E["skills/"]
-    E --> F["codex-skill-router/"]
-    F --> G["SKILL.md"]
-    F --> H["scripts/"]
-    F --> I["fixtures/"]
-    F --> J["references/"]
-    F --> K["agents/openai.yaml"]
+    R["Native-first router"] --> O["openai-docs"]
+    R --> H["harness-doctor"]
+    R --> D["debug-root-cause"]
+    R --> V["review-swarm"]
+    R --> T["tdd-implementation"]
+    R --> L["lazyweb-design"]
+    L --> Q["visual-qa"]
+    R --> E["evidence-loop"]
+    R --> G["git-checkpoint"]
 ```
 
-## Routing Flow
+| 작업 | 기본 조합 |
+| --- | --- |
+| 작은 편집·일반 구현 | 전문 스킬 없음 |
+| GPT·OpenAI·Codex 최신 정보 | `openai-docs` |
+| 스킬·라우팅 변경 | `harness-doctor` |
+| 오류 원인 조사 | `debug-root-cause` |
+| 출시·보안·명시적 감사 | `review-swarm` + 필요한 evidence |
+| 동작을 가진 백엔드/API 구현 | `tdd-implementation` |
+| 중요한 UI 방향 탐색 | `lazyweb-design`, 구현 후 `visual-qa` |
+| 원격 게시 | `git-checkpoint`, 단 사용자 명시 요청이 있을 때만 |
 
-```mermaid
-sequenceDiagram
-    participant U as User
-    participant S as Codex Skill Router
-    participant C as classify_task.py
-    participant W as Worker Skill
-    participant E as Evidence Gate
-
-    U->>S: Natural-language task
-    S->>C: Classify request
-    C-->>S: route + constraints + suggested_skills
-    S->>W: Handoff with constraints
-    W->>E: Run route-appropriate checks
-    E-->>S: pass/fail/not-run evidence
-    S-->>U: Outcome + proof + residual risk
-```
-
-## Example Classification
+## 예시
 
 ```bash
 python3 plugins/vibebuilder-codex-skill-router/skills/codex-skill-router/scripts/classify_task.py \
-  "수정하지 말고 현재 구조만 분석해줘"
+  "gpt 5.6에서 기존 Codex 스킬 조합이 의미가 있는지 분석해줘"
 ```
 
-Expected shape:
+이 요청은 `read_only=true`, `routing_policy=native-first`로 분류되고 `openai-docs`와 `harness-doctor`만 추천해야 한다. `tdd-implementation`과 `evidence-loop`는 붙지 않는다.
 
-```json
-{
-  "route": "deep",
-  "constraints": {
-    "read_only": true,
-    "current_docs_required": false
-  },
-  "suggested_skills": ["evidence-loop"],
-  "forbidden_actions": ["edit_files", "write_files", "stage_or_commit_changes"]
-}
+## 전역 설치
+
+먼저 dry-run을 확인한다.
+
+```bash
+python3 plugins/vibebuilder-codex-skill-router/skills/codex-skill-router/scripts/install_global.py --dry-run
 ```
 
-## Validation
+사용자가 전역 변경을 요청했다면 설치한다.
 
-Run the skill-level self-test:
+```bash
+python3 plugins/vibebuilder-codex-skill-router/skills/codex-skill-router/scripts/install_global.py
+```
+
+설치기는 기존 전역 파일과 legacy router를 `~/.codex/backups/vibebuilder-codex-5-6/<timestamp>/`에 보존하고 active discovery에서 제외한다. 현재 App CLI와 충돌하는 오래된 hook/network config key도 함께 migration한다. 새 App 컨텍스트에서만 변경된 전역 지시와 skill 목록을 확인할 수 있다.
+
+## 검증
 
 ```bash
 python3 plugins/vibebuilder-codex-skill-router/skills/codex-skill-router/scripts/self_test.py
-```
-
-Run the repo-level test:
-
-```bash
 python3 -m unittest codex-skill/tests/test_codex_skill.py
 ```
 
-The key safety property is that routing changes must pass both train and heldout fixtures before being treated as an improvement.
-
-## How To Extend
-
-1. Add a failing or missing behavior to `fixtures/route_fixtures.jsonl`.
-2. Run `scripts/route_eval.py` and confirm the fixture fails.
-3. Update `scripts/classify_task.py`.
-4. Run `scripts/self_test.py`.
-5. Update this README if the route contract changes.
+현재 회귀 세트는 단순 route 일치만 확인하지 않는다. 분석의 read-only 기본값, 작은 편집의 0-skill 경로, OpenAI 공식 문서 선택, 원격 쓰기 권한, skill 수 상한을 함께 검사한다.
